@@ -3,8 +3,35 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Route;
+use Laravel\Cashier\Cashier;
 use Nvl\Billing\Definitions\Tables\BillingTables;
 use Nvl\Billing\Models\BillingAccount;
+use Nvl\Billing\Models\BillingSubscription;
+use Nvl\Billing\Models\BillingSubscriptionItem;
+use Nvl\Payments\Providers\PaymentsServiceProvider;
+
+beforeEach(function (): void {
+    if (! class_exists(PaymentsServiceProvider::class)) {
+        return;
+    }
+    config(['payments.enabled' => true]);
+    app()->register(PaymentsServiceProvider::class, true);
+    Route::getRoutes()->refreshNameLookups();
+    expect(Route::getRoutes()->getByName('nvl.payments.webhook'))->not->toBeNull();
+});
+
+it('keeps both webhook routes and Billing Cashier models when Payments loads', function (): void {
+    if (! class_exists(PaymentsServiceProvider::class)) {
+        $this->markTestSkipped('Payments is not installed.');
+    }
+
+    expect(Route::getRoutes()->getByName('nvl.billing.webhook'))->not->toBeNull()
+        ->and(Route::getRoutes()->getByName('nvl.payments.webhook'))->not->toBeNull()
+        ->and(Cashier::$customerModel)->toBe(BillingAccount::class)
+        ->and(Cashier::$subscriptionModel)->toBe(BillingSubscription::class)
+        ->and(Cashier::$subscriptionItemModel)->toBe(BillingSubscriptionItem::class);
+});
 
 it('requires a signed webhook and applies each Stripe event once', function (): void {
     $account = BillingAccount::query()->forceCreate([
