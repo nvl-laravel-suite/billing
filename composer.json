@@ -47,7 +47,7 @@
         "sort-packages": true
     },
     "archive": {
-        "exclude": ["/build", "/coverage", "/.phpunit.cache", "/.phpunit.result.cache", "/phpstan.neon.dist", "/phpunit.xml.dist", "/tests", "/vendor", "/composer.lock"]
+        "exclude": ["/.temp", "/build", "/coverage", "/.phpunit.cache", "/.phpunit.result.cache", "/phpstan.neon.dist", "/phpunit.xml.dist", "/tests", "/vendor", "/composer.lock"]
     },
     "minimum-stability": "stable",
     "prefer-stable": true

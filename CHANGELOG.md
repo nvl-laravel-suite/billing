@@ -4,6 +4,12 @@ All notable changes to `nvl/billing` are documented here.
 
 ## [Unreleased]
 
+## [2.0.2] - 2026-09-28
+
+### Fixed
+
+- Exclude generated PHPStan caches from Composer archives.
+
 ## [2.0.1] - 2026-09-28
 
 ### Documentation
