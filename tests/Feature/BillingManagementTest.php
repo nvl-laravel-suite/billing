@@ -101,3 +101,53 @@ it('creates a portal entry only for an authorized tenant with a Stripe customer'
 
     expect(app(BillingPortal::class)->url($tenantId, $actor, 'https://app.test/billing'))->toBe('https://billing.stripe.test/portal');
 });
+
+it('rejects disabled billing, suspended tenants, and invalid checkout email', function (): void {
+    config()->set('billing.prices', ['pro' => ['monthly' => 'price_pro_month']]);
+    $tenant = Tenant::query()->create(['name' => 'Acme', 'status' => TenantStatus::Suspended]);
+    $tenantId = new TenantId($tenant->id);
+    $actor = new GenericUser(['id' => 'manager']);
+    app()->instance(BillingManagementAccess::class, new class implements BillingManagementAccess
+    {
+        public function assertCanManage(Authenticatable $actor, TenantId $tenant): void {}
+    });
+    $checkout = app(StartCheckoutAction::class);
+    $start = fn (string $email): CheckoutSession => $checkout->execute($tenantId, $actor, $email, 'pro', 'monthly', 'https://app.test/success', 'https://app.test/cancel');
+
+    config()->set('billing.enabled', false);
+    expect(fn () => $start('billing@example.test'))->toThrow(DomainException::class, 'Billing is disabled.');
+
+    config()->set('billing.enabled', true);
+    expect(fn () => $start('billing@example.test'))->toThrow(DomainException::class, 'Only active tenants');
+
+    $tenant->update(['status' => TenantStatus::Active]);
+    expect(fn () => $start('invalid'))->toThrow(InvalidArgumentException::class, 'A valid billing email');
+});
+
+it('blocks duplicate subscriptions and conflicting pending checkouts', function (): void {
+    config()->set('billing.prices', ['pro' => ['monthly' => 'price_pro_month', 'yearly' => 'price_pro_year']]);
+    $tenant = Tenant::query()->create(['name' => 'Acme', 'status' => TenantStatus::Active]);
+    $tenantId = new TenantId($tenant->id);
+    $account = BillingAccount::query()->create(['tenant_id' => $tenantId->value, 'email' => 'billing@example.test']);
+    app()->instance(BillingManagementAccess::class, new class implements BillingManagementAccess
+    {
+        public function assertCanManage(Authenticatable $actor, TenantId $tenant): void {}
+    });
+    $checkout = app(StartCheckoutAction::class);
+    $start = fn (): CheckoutSession => $checkout->execute($tenantId, new GenericUser(['id' => 'manager']), 'billing@example.test', 'pro', 'monthly', 'https://app.test/success', 'https://app.test/cancel');
+    $subscription = $account->subscriptions()->create(['type' => 'default', 'stripe_id' => 'sub_existing', 'stripe_status' => 'active']);
+
+    expect($start)->toThrow(DomainException::class, 'already has a subscription');
+
+    $subscription->delete();
+    $account->forceFill([
+        'pending_checkout_attempt_id' => 'attempt-other',
+        'pending_checkout_price' => 'price_pro_year',
+        'pending_checkout_expires_at' => now()->addHour(),
+    ])->save();
+    expect($start)->toThrow(DomainException::class, 'another plan is already pending');
+
+    $account->forceFill(['pending_checkout_attempt_id' => null])->save();
+    config()->set('billing.trial.days', 1);
+    expect($start)->toThrow(InvalidArgumentException::class, 'zero or at least two');
+});

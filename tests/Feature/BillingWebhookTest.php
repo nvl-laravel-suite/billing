@@ -142,3 +142,32 @@ it('synchronizes an explicit billing contact changed through the Stripe portal',
     expect($account->fresh()->name)->toBe('Acme Billing')
         ->and($account->fresh()->email)->toBe('new@example.test');
 });
+
+it('revokes subscription access when Stripe deletes the billing customer', function (): void {
+    $account = BillingAccount::query()->forceCreate([
+        'tenant_id' => '1bc8245c-81fe-4ffb-b90a-99088939ed5e',
+        'email' => 'billing@example.test',
+        'stripe_id' => 'cus_deleted',
+    ]);
+    $subscription = $account->subscriptions()->create([
+        'type' => 'default',
+        'stripe_id' => 'sub_deleted_customer',
+        'stripe_status' => 'active',
+    ]);
+    $payload = json_encode([
+        'id' => 'evt_customer_deleted',
+        'type' => 'customer.deleted',
+        'data' => ['object' => ['id' => 'cus_deleted']],
+    ], JSON_THROW_ON_ERROR);
+    $timestamp = time();
+    $signature = hash_hmac('sha256', "{$timestamp}.{$payload}", 'whsec_billing_test');
+
+    $this->call('POST', '/nvl/billing/stripe/webhook', [], [], [], [
+        'CONTENT_TYPE' => 'application/json',
+        'HTTP_Stripe_Signature' => "t={$timestamp},v1={$signature}",
+    ], $payload)->assertNoContent();
+
+    expect($account->fresh()->stripe_id)->toBeNull()
+        ->and($subscription->fresh()->stripe_status)->toBe('canceled')
+        ->and($subscription->fresh()->ends_at)->not->toBeNull();
+});

@@ -59,3 +59,40 @@ it('updates only an authorized tenant billing contact and synchronizes Stripe', 
         ->and($account->fresh()->email)->toBe('billing@example.test')
         ->and($gateway->updates)->toBe(1);
 });
+
+it('creates a contact locally before the tenant has a Stripe customer', function (): void {
+    $tenant = Tenant::query()->create(['name' => 'Acme', 'status' => TenantStatus::Active]);
+    $tenantId = new TenantId($tenant->id);
+    app()->instance(BillingManagementAccess::class, new class implements BillingManagementAccess
+    {
+        public function assertCanManage(Authenticatable $actor, TenantId $tenant): void {}
+    });
+
+    $contact = app(UpdateBillingContactAction::class)->execute(
+        $tenantId,
+        new GenericUser(['id' => 'manager']),
+        '  Accounts Team  ',
+        '  accounts@example.test  ',
+    );
+
+    expect($contact->tenant_id)->toBe($tenantId->value)
+        ->and($contact->name)->toBe('Accounts Team')
+        ->and($contact->email)->toBe('accounts@example.test')
+        ->and($contact->stripe_id)->toBeNull();
+});
+
+it('rejects invalid billing contacts without creating an account', function (): void {
+    $tenant = Tenant::query()->create(['name' => 'Acme', 'status' => TenantStatus::Active]);
+    app()->instance(BillingManagementAccess::class, new class implements BillingManagementAccess
+    {
+        public function assertCanManage(Authenticatable $actor, TenantId $tenant): void {}
+    });
+
+    expect(fn () => app(UpdateBillingContactAction::class)->execute(
+        new TenantId($tenant->id),
+        new GenericUser(['id' => 'manager']),
+        ' ',
+        'not-an-email',
+    ))->toThrow(InvalidArgumentException::class)
+        ->and(BillingAccount::query()->count())->toBe(0);
+});
