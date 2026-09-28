@@ -1,0 +1,4 @@
+interface:
+  display_name: "NVL Billing"
+  short_description: "Build tenant-owned Stripe subscription workflows"
+  default_prompt: "Use $nvl-billing to implement or review Stripe Checkout, tenant billing policy, trials, webhooks, and reconciliation."

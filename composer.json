@@ -1,0 +1,52 @@
+{
+    "name": "nvl/billing",
+    "description": "Tenant-owned Stripe subscription billing for Laravel applications",
+    "type": "library",
+    "license": "MIT",
+    "keywords": ["laravel", "billing", "stripe", "subscriptions"],
+    "require": {
+        "php": "^8.4",
+        "ext-filter": "*",
+        "laravel/framework": "^13.0",
+        "laravel/cashier": "^16.0",
+        "nesbot/carbon": "^3.0",
+        "nvl/core": "^2.0",
+        "nvl/tenancy": "^2.0",
+        "symfony/http-foundation": "^7.0|^8.0"
+    },
+    "require-dev": {
+        "larastan/larastan": "^3.10",
+        "laravel/pint": "^1.27",
+        "orchestra/testbench": "^11.0",
+        "pestphp/pest": "^4.0",
+        "pestphp/pest-plugin-laravel": "^4.0"
+    },
+    "autoload": {
+        "psr-4": {"Nvl\\Billing\\": "src/"}
+    },
+    "autoload-dev": {
+        "psr-4": {"Nvl\\Billing\\Tests\\": "tests/"}
+    },
+    "scripts": {
+        "analyse": "phpstan analyse --memory-limit=2G",
+        "format": "pint --parallel --format agent",
+        "format:test": "pint --parallel --test --format agent",
+        "quality": ["@format:test", "@analyse", "@test"],
+        "test": "pest --compact"
+    },
+    "extra": {
+        "branch-alias": {"dev-main": "2.x-dev"},
+        "laravel": {
+            "providers": ["Nvl\\Billing\\Providers\\BillingServiceProvider"]
+        }
+    },
+    "config": {
+        "allow-plugins": {"pestphp/pest-plugin": true},
+        "sort-packages": true
+    },
+    "archive": {
+        "exclude": ["/build", "/coverage", "/.phpunit.cache", "/.phpunit.result.cache", "/phpstan.neon.dist", "/phpunit.xml.dist", "/tests", "/vendor", "/composer.lock"]
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
