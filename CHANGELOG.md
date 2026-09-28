@@ -4,6 +4,12 @@ All notable changes to `nvl/billing` are documented here.
 
 ## [Unreleased]
 
+## [2.0.1] - 2026-09-28
+
+### Documentation
+
+- Clarify that Billing is available on Packagist and describe the published installation sequence.
+
 ## [2.0.0] - 2026-09-28
 
 ### Added

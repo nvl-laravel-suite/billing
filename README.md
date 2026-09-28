@@ -22,7 +22,7 @@ The package requires `nvl/core`, `nvl/tenancy`, and `laravel/cashier`. Billing d
 
 ## Requirements and installation
 
-Use PHP 8.4+, Laravel 13, Stripe, and an active Tenancy tenant directory. Install from Packagist after the first public Billing release. The example below is a deployment sequence, not a command to run before the package is published:
+Use PHP 8.4+, Laravel 13, Stripe, and an active Tenancy tenant directory. Install the published package from Packagist, then configure it in the host application:
 
 ```bash
 composer require nvl/billing:^2.0
