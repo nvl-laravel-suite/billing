@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace Nvl\Billing\Services;
 
-use InvalidArgumentException;
 use Nvl\Billing\Catalog\PlanCatalog;
 use Nvl\Billing\Contracts\BillingAccessContract;
+use Nvl\Billing\Enums\BillingResponseCode;
+use Nvl\Billing\Exceptions\BillingException;
 use Nvl\Billing\Models\BillingAccount;
 use Nvl\Billing\Models\BillingSubscription;
 use Nvl\Billing\Models\BillingSubscriptionItem;
@@ -37,7 +38,7 @@ final readonly class BillingAccess implements BillingAccessContract
 
         $type = config('nvl-billing.subscription_type', 'default');
         if (! is_string($type) || $type === '') {
-            throw new InvalidArgumentException('billing.subscription_type must be a nonempty string.');
+            throw BillingException::because(BillingResponseCode::InvalidConfiguration, 'billing.subscription_type must be a nonempty string.');
         }
 
         $subscriptions = BillingSubscription::query()->where('billing_account_id', $account->id)->where('type', $type);
@@ -71,7 +72,7 @@ final readonly class BillingAccess implements BillingAccessContract
 
         $item = $items->first();
         if (! $item instanceof BillingSubscriptionItem) {
-            throw new InvalidArgumentException('Cashier is not using the Billing subscription item model.');
+            throw BillingException::because(BillingResponseCode::InvalidConfiguration, 'Cashier is not using the Billing subscription item model.');
         }
 
         $plan = $this->catalog->planForPrice($item->stripe_price);
@@ -85,7 +86,7 @@ final readonly class BillingAccess implements BillingAccessContract
         $path = $plan === null ? 'nvl-billing.access.free' : "nvl-billing.access.plans.{$plan}";
         $policy = config($path, []);
         if (! is_array($policy)) {
-            throw new InvalidArgumentException('Billing access policy must be an array.');
+            throw BillingException::because(BillingResponseCode::InvalidConfiguration, 'Billing access policy must be an array.');
         }
 
         /** @var list<string> $features */

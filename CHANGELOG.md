@@ -1,10 +1,19 @@
 # Changelog
 
+## Unreleased — consumer runtime integration
+
+- Added focused consumer contract/testing guidance and shipped-factory usage limits.
+- Versioned committed event payloads and documented canonical aliases, source connections, failure metadata and optional safe rendering.
+- Added explicit first-use/installer and deployment guidance; new acceptance checks remain pending.
+
+
 All notable changes to `nvl/billing` are documented here.
 
 ## [Unreleased]
 
 ### Added
+
+- Add runtime FakeBillingGateway and FakeSubscriptionReader with native typed responses, instance-owned FIFO scripts/call records and explicit container installation, without Stripe reads or account writes.
 
 - Focused `StartCheckoutContract`, `UpdateBillingContactContract`, `BillingAccessContract`, and `BillingPortalContract` interfaces for host injection and orchestration testing, with conditional transient defaults preserving concrete constructors and native workflow results.
 

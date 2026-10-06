@@ -1,0 +1,25 @@
+{
+    "schema_version": 1,
+    "configs": {
+        "nvl-billing": {
+            "required": [],
+            "common": [
+                "adoption.cashier_models",
+                "adoption.cashier_routes",
+                "connection",
+                "enabled",
+                "migrations.enabled",
+                "routes.webhook.enabled"
+            ],
+            "advanced": [
+                "access.free.features",
+                "access.free.limits",
+                "access.plans",
+                "prices",
+                "subscription_type",
+                "trial.days",
+                "trial.require_payment_method"
+            ]
+        }
+    }
+}

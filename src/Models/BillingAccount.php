@@ -6,9 +6,11 @@ namespace Nvl\Billing\Models;
 
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Laravel\Cashier\Billable;
+use Nvl\Billing\Database\Factories\BillingAccountFactory;
 use Nvl\Billing\Definitions\Tables\BillingTables;
 use Nvl\Billing\Models\Concerns\UsesBillingConnection;
 use Nvl\Support\Config\PackageStorage;
@@ -34,6 +36,9 @@ use Nvl\Support\Config\PackageStorage;
 final class BillingAccount extends Model
 {
     use Billable;
+
+    /** @use HasFactory<BillingAccountFactory> */
+    use HasFactory;
     use HasUuids;
     use UsesBillingConnection;
 
@@ -65,5 +70,15 @@ final class BillingAccount extends Model
     public function getConnectionName(): ?string
     {
         return PackageStorage::connectionName($this->connection ?? PackageStorage::connection('billing') ?? parent::getConnectionName());
+    }
+
+    /**
+     * Return the package's runtime fixture factory.
+     *
+     * @internal
+     */
+    protected static function newFactory(): BillingAccountFactory
+    {
+        return BillingAccountFactory::new();
     }
 }

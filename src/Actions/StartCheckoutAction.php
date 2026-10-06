@@ -15,8 +15,11 @@ use Nvl\Billing\Catalog\PlanCatalog;
 use Nvl\Billing\Contracts\BillingGateway;
 use Nvl\Billing\Contracts\BillingManagementAccess;
 use Nvl\Billing\Contracts\StartCheckoutContract;
+use Nvl\Billing\Enums\BillingResponseCode;
+use Nvl\Billing\Exceptions\BillingException;
 use Nvl\Billing\Models\BillingAccount;
 use Nvl\Billing\Models\BillingSubscription;
+use Nvl\Billing\Services\BillingEvents;
 use Nvl\Billing\ValueObjects\CheckoutAttempt;
 use Nvl\Billing\ValueObjects\CheckoutSession;
 use Nvl\Support\Tenancy\Contracts\TenantDirectory;
@@ -36,6 +39,7 @@ final readonly class StartCheckoutAction implements StartCheckoutContract
         private BillingManagementAccess $management,
         private PlanCatalog $catalog,
         private BillingGateway $gateway,
+        private BillingEvents $events,
     ) {}
 
     /**
@@ -54,12 +58,12 @@ final readonly class StartCheckoutAction implements StartCheckoutContract
         string $cancelUrl,
     ): CheckoutSession {
         if (config('nvl-billing.enabled') !== true) {
-            throw new DomainException('Billing is disabled.');
+            throw BillingException::because(BillingResponseCode::FeatureDisabled, 'Billing is disabled.');
         }
 
         $this->management->assertCanManage($actor, $tenant);
         if ($this->tenants->find($tenant)->status !== TenantStatus::Active) {
-            throw new DomainException('Only active tenants may start billing.');
+            throw BillingException::because(BillingResponseCode::TenantInactive, 'Only active tenants may start billing.');
         }
 
         if (filter_var($billingEmail, FILTER_VALIDATE_EMAIL) === false) {
@@ -86,12 +90,18 @@ final readonly class StartCheckoutAction implements StartCheckoutContract
             $attempt->id,
         );
 
-        BillingAccount::query()->whereKey($account->id)
-            ->where('pending_checkout_attempt_id', $attempt->id)
-            ->update([
-                'pending_checkout_session_id' => $session->id,
-                'pending_checkout_url' => $session->url,
-            ]);
+        $account->getConnection()->transaction(function () use ($account, $attempt, $session): void {
+            $updated = BillingAccount::query()->whereKey($account->id)
+                ->where('pending_checkout_attempt_id', $attempt->id)
+                ->whereNull('pending_checkout_session_id')
+                ->update([
+                    'pending_checkout_session_id' => $session->id,
+                    'pending_checkout_url' => $session->url,
+                ]);
+            if ($updated === 1) {
+                $this->events->checkoutStarted($account, $attempt->id, $session->id);
+            }
+        });
 
         return $session;
     }
@@ -100,10 +110,14 @@ final readonly class StartCheckoutAction implements StartCheckoutContract
     private function accountFor(TenantId $tenant, string $email): BillingAccount
     {
         try {
-            return BillingAccount::query()->firstOrCreate(
-                ['tenant_id' => $tenant->value],
-                ['email' => $email],
-            );
+            return (new BillingAccount)->getConnection()->transaction(function () use ($tenant, $email): BillingAccount {
+                $account = BillingAccount::query()->firstOrCreate(['tenant_id' => $tenant->value], ['email' => $email]);
+                if ($account->wasRecentlyCreated) {
+                    $this->events->accountChanged($account, 'created');
+                }
+
+                return $account;
+            });
         } catch (UniqueConstraintViolationException) {
             return BillingAccount::query()->where('tenant_id', $tenant->value)->firstOrFail();
         }
@@ -115,7 +129,7 @@ final readonly class StartCheckoutAction implements StartCheckoutContract
         $account = BillingAccount::query()->whereKey($account->id)->lockForUpdate()->firstOrFail();
         $type = config('nvl-billing.subscription_type', 'default');
         if (! is_string($type) || $type === '') {
-            throw new InvalidArgumentException('billing.subscription_type must be a nonempty string.');
+            throw BillingException::because(BillingResponseCode::InvalidConfiguration, 'billing.subscription_type must be a nonempty string.');
         }
 
         $hasExistingSubscription = BillingSubscription::query()
@@ -127,13 +141,13 @@ final readonly class StartCheckoutAction implements StartCheckoutContract
             })
             ->exists();
         if ($hasExistingSubscription) {
-            throw new DomainException('The tenant already has a subscription; use the billing portal.');
+            throw BillingException::because(BillingResponseCode::SubscriptionConflict, 'The tenant already has a subscription; use the billing portal.');
         }
 
         $expiry = $account->pending_checkout_expires_at;
         if ($account->pending_checkout_attempt_id !== null && $expiry?->isFuture() === true) {
             if ($account->pending_checkout_price !== $price) {
-                throw new DomainException('A Checkout for another plan is already pending.');
+                throw BillingException::because(BillingResponseCode::CheckoutConflict, 'A Checkout for another plan is already pending.');
             }
 
             $session = $account->pending_checkout_session_id !== null && $account->pending_checkout_url !== null
@@ -162,7 +176,7 @@ final readonly class StartCheckoutAction implements StartCheckoutContract
     {
         $days = config('nvl-billing.trial.days', 0);
         if (! is_int($days) || ($days !== 0 && $days < 2)) {
-            throw new InvalidArgumentException('billing.trial.days must be zero or at least two.');
+            throw BillingException::because(BillingResponseCode::InvalidConfiguration, 'billing.trial.days must be zero or at least two.');
         }
 
         return $account->trial_consumed_at === null ? $days : 0;

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Nvl\Billing\Providers;
 
 use Illuminate\Support\ServiceProvider;
-use InvalidArgumentException;
 use Laravel\Cashier\Cashier;
 use Nvl\Billing\Actions\StartCheckoutAction;
 use Nvl\Billing\Actions\UpdateBillingContactAction;
@@ -19,6 +18,8 @@ use Nvl\Billing\Contracts\BillingPortalContract;
 use Nvl\Billing\Contracts\StartCheckoutContract;
 use Nvl\Billing\Contracts\SubscriptionReader;
 use Nvl\Billing\Contracts\UpdateBillingContactContract;
+use Nvl\Billing\Enums\BillingResponseCode;
+use Nvl\Billing\Exceptions\BillingException;
 use Nvl\Billing\Models\BillingAccount;
 use Nvl\Billing\Models\BillingSubscription;
 use Nvl\Billing\Models\BillingSubscriptionItem;
@@ -28,8 +29,11 @@ use Nvl\Billing\Services\BillingPortal;
 use Nvl\Billing\Services\DenyBillingManagementAccess;
 use Nvl\Billing\Services\StripeBillingGateway;
 use Nvl\Billing\Services\StripeSubscriptionReader;
+use Nvl\Support\Bindings\RequiredBindingDefinition;
+use Nvl\Support\Bindings\RequiredBindings;
 use Nvl\Support\Doctor\DoctorCheck;
 use Nvl\Support\Doctor\PackageDoctorContributor;
+use Nvl\Support\Globals\GlobalNames;
 use Nvl\Support\Traits\MergesPackageConfiguration;
 use Nvl\Support\Traits\RegistersNamespacedResources;
 
@@ -64,21 +68,28 @@ final class BillingServiceProvider extends ServiceProvider
         $this->app->bindIf(UpdateBillingContactContract::class, UpdateBillingContactAction::class);
         $this->app->bindIf(BillingAccessContract::class, BillingAccess::class);
         $this->app->bindIf(BillingPortalContract::class, BillingPortal::class);
+        $this->callAfterResolving(RequiredBindings::class, static function (RequiredBindings $bindings): void {
+            $bindings->register(new RequiredBindingDefinition('billing', BillingManagementAccess::class, DenyBillingManagementAccess::class, 'billing_management', 'nvl-billing.enabled', 'https://github.com/nvl-laravel-suite/billing#required-bindings'));
+        });
     }
 
     /** Publish the configuration and load only explicitly enabled migrations. */
     public function boot(): void
     {
+        $this->app->make(GlobalNames::class)->translations('billing', __DIR__.'/../../lang', $this->app->make('translation.loader'));
+        $this->publishes([
+            __DIR__.'/../../lang' => lang_path('vendor/nvl-billing'),
+        ], 'nvl-billing-translations');
         $path = __DIR__.'/../../database/migrations/billing';
         $this->commands([BillingDoctorCommand::class, BillingReconcileCommand::class]);
 
         if (config('nvl-billing.enabled') === true) {
             if (config('nvl-tenancy.enabled') !== true) {
-                throw new InvalidArgumentException('Tenancy must be enabled before Billing.');
+                throw BillingException::because(BillingResponseCode::InvalidConfiguration, 'Tenancy must be enabled before Billing.');
             }
 
             if (! is_string(config('cashier.webhook.secret')) || config('cashier.webhook.secret') === '') {
-                throw new InvalidArgumentException('A Stripe webhook signing secret is required when Billing is enabled.');
+                throw BillingException::because(BillingResponseCode::InvalidConfiguration, 'A Stripe webhook signing secret is required when Billing is enabled.');
             }
 
             if (config('nvl-billing.adoption.cashier_models') === true) {

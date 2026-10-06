@@ -8,9 +8,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Nvl\Billing\Definitions\Tables\BillingTables;
 use Nvl\Billing\Models\BillingAccount;
-use Nvl\Billing\Models\BillingSubscription;
 use Nvl\Billing\Services\BillingAccountStateUpdater;
+use Nvl\Billing\Services\BillingCustomerSyncer;
 use Nvl\Billing\Services\BillingSubscriptionSyncer;
+use Nvl\Support\Config\PackageStorage;
 use Symfony\Component\HttpFoundation\Response;
 
 /** Verifies, deduplicates, and synchronizes tenant Stripe billing events. */
@@ -20,6 +21,7 @@ final class BillingWebhookController
     public function __construct(
         private readonly BillingSubscriptionSyncer $subscriptions,
         private readonly BillingAccountStateUpdater $accounts,
+        private readonly BillingCustomerSyncer $customers,
     ) {}
 
     /** Apply one signed Stripe event through Cashier and record its side effects. */
@@ -29,8 +31,7 @@ final class BillingWebhookController
         if (! is_array($payload) || ! is_string($payload['id'] ?? null) || ! is_string($payload['type'] ?? null)) {
             return response()->json(['message' => 'Invalid Stripe event.'], 400);
         }
-        $configuredConnection = config('nvl-billing.connection') ?? config('nvl-tenancy.connection');
-        $connection = is_string($configuredConnection) ? $configuredConnection : null;
+        $connection = PackageStorage::connection('billing');
 
         return DB::connection($connection)->transaction(function () use ($payload, $connection): Response {
             $inserted = DB::connection($connection)
@@ -89,13 +90,13 @@ final class BillingWebhookController
         }
 
         if ($type === 'customer.updated') {
-            $this->updateCustomer($subscription);
+            $this->customers->updateCustomer($subscription);
 
             return;
         }
 
         if ($type === 'customer.deleted') {
-            $this->deleteCustomer($subscription);
+            $this->customers->deleteCustomer($subscription);
 
             return;
         }
@@ -112,48 +113,5 @@ final class BillingWebhookController
 
         $this->subscriptions->sync($subscription);
         $this->accounts->subscriptionSynced($account, $subscription, $type === 'customer.subscription.created');
-    }
-
-    /** @param array<string, mixed> $customer */
-    private function updateCustomer(array $customer): void
-    {
-        $id = $customer['id'] ?? null;
-        if (! is_string($id)) {
-            return;
-        }
-
-        $account = BillingAccount::query()->where('stripe_id', $id)->first();
-        if ($account === null) {
-            return;
-        }
-
-        $changes = [];
-        if (is_string($customer['name'] ?? null) && $customer['name'] !== '') {
-            $changes['name'] = $customer['name'];
-        }
-        if (is_string($customer['email'] ?? null) && filter_var($customer['email'], FILTER_VALIDATE_EMAIL) !== false) {
-            $changes['email'] = $customer['email'];
-        }
-        if ($changes !== []) {
-            $account->forceFill($changes)->save();
-        }
-    }
-
-    /** @param array<string, mixed> $customer */
-    private function deleteCustomer(array $customer): void
-    {
-        $id = $customer['id'] ?? null;
-        if (! is_string($id)) {
-            return;
-        }
-
-        $account = BillingAccount::query()->where('stripe_id', $id)->first();
-        if ($account === null) {
-            return;
-        }
-
-        BillingSubscription::query()->where('billing_account_id', $account->id)
-            ->update(['stripe_status' => 'canceled', 'ends_at' => now()]);
-        $account->forceFill(['stripe_id' => null, 'pm_type' => null, 'pm_last_four' => null])->save();
     }
 }

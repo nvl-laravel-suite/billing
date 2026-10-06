@@ -3,15 +3,16 @@
 declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
-use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\GenericUser;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Nvl\Billing\Actions\StartCheckoutAction;
 use Nvl\Billing\Contracts\BillingGateway;
 use Nvl\Billing\Contracts\BillingManagementAccess;
+use Nvl\Billing\Exceptions\BillingException;
 use Nvl\Billing\Models\BillingAccount;
 use Nvl\Billing\Services\BillingPortal;
 use Nvl\Billing\ValueObjects\CheckoutSession;
+use Nvl\Support\Exceptions\BindingRequiredException;
 use Nvl\Tenancy\Enums\TenantStatus;
 use Nvl\Tenancy\Models\Tenant;
 use Nvl\Tenancy\ValueObjects\TenantId;
@@ -72,7 +73,7 @@ it('denies billing management until the host supplies an authorization adapter',
         'monthly',
         'https://app.test/success',
         'https://app.test/cancel',
-    ))->toThrow(AuthorizationException::class);
+    ))->toThrow(BindingRequiredException::class);
 });
 
 it('creates a portal entry only for an authorized tenant with a Stripe customer', function (): void {
@@ -115,10 +116,18 @@ it('rejects disabled billing, suspended tenants, and invalid checkout email', fu
     $start = fn (string $email): CheckoutSession => $checkout->execute($tenantId, $actor, $email, 'pro', 'monthly', 'https://app.test/success', 'https://app.test/cancel');
 
     config()->set('nvl-billing.enabled', false);
-    expect(fn () => $start('billing@example.test'))->toThrow(DomainException::class, 'Billing is disabled.');
+    expect(fn () => $start('billing@example.test'))->toThrow(function (BillingException $failure): void {
+        expect($failure)->toBeInstanceOf(DomainException::class)
+            ->and($failure->responseCode())->toBe('feature_disabled')->and($failure->suggestedStatus())->toBe(404)
+            ->and($failure->getMessage())->toContain('Billing is disabled.');
+    });
 
     config()->set('nvl-billing.enabled', true);
-    expect(fn () => $start('billing@example.test'))->toThrow(DomainException::class, 'Only active tenants');
+    expect(fn () => $start('billing@example.test'))->toThrow(function (BillingException $failure): void {
+        expect($failure)->toBeInstanceOf(DomainException::class)
+            ->and($failure->responseCode())->toBe('tenant_inactive')->and($failure->suggestedStatus())->toBe(409)
+            ->and($failure->getMessage())->toContain('Only active tenants');
+    });
 
     $tenant->update(['status' => TenantStatus::Active]);
     expect(fn () => $start('invalid'))->toThrow(InvalidArgumentException::class, 'A valid billing email');
@@ -137,7 +146,11 @@ it('blocks duplicate subscriptions and conflicting pending checkouts', function 
     $start = fn (): CheckoutSession => $checkout->execute($tenantId, new GenericUser(['id' => 'manager']), 'billing@example.test', 'pro', 'monthly', 'https://app.test/success', 'https://app.test/cancel');
     $subscription = $account->subscriptions()->create(['type' => 'default', 'stripe_id' => 'sub_existing', 'stripe_status' => 'active']);
 
-    expect($start)->toThrow(DomainException::class, 'already has a subscription');
+    expect($start)->toThrow(function (BillingException $failure): void {
+        expect($failure)->toBeInstanceOf(DomainException::class)
+            ->and($failure->responseCode())->toBe('subscription_conflict')->and($failure->suggestedStatus())->toBe(409)
+            ->and($failure->getMessage())->toContain('already has a subscription');
+    });
 
     $subscription->delete();
     $account->forceFill([
@@ -145,9 +158,19 @@ it('blocks duplicate subscriptions and conflicting pending checkouts', function 
         'pending_checkout_price' => 'price_pro_year',
         'pending_checkout_expires_at' => now()->addHour(),
     ])->save();
-    expect($start)->toThrow(DomainException::class, 'another plan is already pending');
+    expect($start)->toThrow(function (BillingException $failure): void {
+        expect($failure)->toBeInstanceOf(DomainException::class)
+            ->and($failure->responseCode())->toBe('checkout_conflict')->and($failure->suggestedStatus())->toBe(409)
+            ->and($failure->getMessage())->toContain('another plan is already pending');
+    });
 
     $account->forceFill(['pending_checkout_attempt_id' => null])->save();
     config()->set('nvl-billing.trial.days', 1);
-    expect($start)->toThrow(InvalidArgumentException::class, 'zero or at least two');
+    try {
+        $start();
+        $this->fail('Expected invalid Billing configuration.');
+    } catch (BillingException $exception) {
+        expect($exception->responseCode())->toBe('invalid_configuration')
+            ->and($exception->suggestedStatus())->toBe(500);
+    }
 });

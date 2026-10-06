@@ -12,8 +12,8 @@
     "require": {
         "php": "^8.4",
         "ext-filter": "*",
-        "laravel/framework": "^13.0",
         "laravel/cashier": "^16.0",
+        "laravel/framework": "^12.0 || ^13.0",
         "nesbot/carbon": "^3.0",
         "nvl/core": "^5.0",
         "nvl/tenancy": "^5.0",
@@ -23,14 +23,15 @@
         "larastan/larastan": "^3.10",
         "laravel/pint": "^1.27",
         "mockery/mockery": "^1.6",
-        "orchestra/testbench": "^11.0",
+        "orchestra/testbench": "^10.0 || ^11.0",
         "pestphp/pest": "^4.0",
         "pestphp/pest-plugin-laravel": "^4.0",
         "stripe/stripe-php": "^21.0"
     },
     "autoload": {
         "psr-4": {
-            "Nvl\\Billing\\": "src/"
+            "Nvl\\Billing\\": "src/",
+            "Nvl\\Billing\\Database\\Factories\\": "database/factories/"
         }
     },
     "autoload-dev": {
@@ -78,9 +79,28 @@
             "/vendor",
             "/composer.lock",
             "/.DS_Store",
-            "/**/.DS_Store"
+            "/**/.DS_Store",
+            "/.gitattributes",
+            "/**/.gitattributes",
+            "/.gitignore",
+            "/**/.gitignore",
+            "/**/.gitkeep"
         ]
     },
     "minimum-stability": "stable",
-    "prefer-stable": true
+    "prefer-stable": true,
+    "homepage": "https://github.com/nvl-laravel-suite/billing",
+    "authors": [
+        {
+            "name": "Nicolas Vlachos",
+            "homepage": "https://github.com/nicolasvlachos",
+            "role": "Developer"
+        }
+    ],
+    "support": {
+        "source": "https://github.com/nvl-laravel-suite/billing",
+        "docs": "https://github.com/nvl-laravel-suite/billing#readme",
+        "issues": "https://github.com/nvl-laravel-suite/billing/issues",
+        "security": "https://github.com/nvl-laravel-suite/billing/security/policy"
+    }
 }

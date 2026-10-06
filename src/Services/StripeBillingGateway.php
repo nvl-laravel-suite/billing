@@ -5,10 +5,11 @@ declare(strict_types=1);
 namespace Nvl\Billing\Services;
 
 use Carbon\CarbonImmutable;
-use DomainException;
 use InvalidArgumentException;
 use Laravel\Cashier\Cashier;
 use Nvl\Billing\Contracts\BillingGateway;
+use Nvl\Billing\Enums\BillingResponseCode;
+use Nvl\Billing\Exceptions\BillingException;
 use Nvl\Billing\Models\BillingAccount;
 use Nvl\Billing\ValueObjects\CheckoutSession;
 
@@ -31,12 +32,12 @@ final class StripeBillingGateway implements BillingGateway
 
         $customerId = $account->stripe_id;
         if ($customerId === null) {
-            throw new DomainException('Stripe did not return a billing customer.');
+            throw BillingException::because(BillingResponseCode::ProviderPayloadInvalid, 'Stripe did not return a billing customer.');
         }
 
         $subscriptionType = config('nvl-billing.subscription_type', 'default');
         if (! is_string($subscriptionType) || $subscriptionType === '') {
-            throw new InvalidArgumentException('billing.subscription_type must be a nonempty string.');
+            throw BillingException::because(BillingResponseCode::InvalidConfiguration, 'billing.subscription_type must be a nonempty string.');
         }
 
         $subscriptionData = [
@@ -68,7 +69,7 @@ final class StripeBillingGateway implements BillingGateway
         ], ['idempotency_key' => "{$attemptId}-checkout"]);
 
         if ($session->id === '' || ! is_string($session->url) || $session->url === '') {
-            throw new DomainException('Stripe did not return a hosted Checkout session.');
+            throw BillingException::because(BillingResponseCode::ProviderPayloadInvalid, 'Stripe did not return a hosted Checkout session.');
         }
 
         return new CheckoutSession($session->id, $session->url, $expiresAt);
@@ -87,7 +88,7 @@ final class StripeBillingGateway implements BillingGateway
         ]);
 
         if ($session->url === '') {
-            throw new DomainException('Stripe did not return a billing portal URL.');
+            throw BillingException::because(BillingResponseCode::ProviderPayloadInvalid, 'Stripe did not return a billing portal URL.');
         }
 
         return $session->url;

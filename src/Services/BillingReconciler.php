@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace Nvl\Billing\Services;
 
-use DomainException;
 use Illuminate\Support\Facades\DB;
 use Nvl\Billing\Contracts\SubscriptionReader;
+use Nvl\Billing\Enums\BillingResponseCode;
+use Nvl\Billing\Exceptions\BillingException;
 use Nvl\Billing\Models\BillingAccount;
+use Nvl\Billing\Models\BillingSubscription;
 use Nvl\Support\Tenancy\ValueObjects\TenantId;
+use TypeError;
 
 /** Repairs a tenant's local Cashier state from Stripe's current objects. */
 final readonly class BillingReconciler
@@ -35,7 +38,7 @@ final readonly class BillingReconciler
         DB::connection($account->getConnectionName())->transaction(function () use ($account, $remote, &$remoteIds): void {
             foreach ($remote as $subscription) {
                 if (($subscription['customer'] ?? null) !== $account->stripe_id || ! is_string($subscription['id'] ?? null)) {
-                    throw new DomainException('Stripe returned a subscription for a different billing customer.');
+                    throw BillingException::because(BillingResponseCode::ProviderIdentityMismatch, 'Stripe returned a subscription for a different billing customer.');
                 }
 
                 $remoteIds[] = $subscription['id'];
@@ -45,7 +48,10 @@ final readonly class BillingReconciler
 
             $missing = $account->subscriptions()->whereNotIn('stripe_id', $remoteIds)->get();
             foreach ($missing as $subscription) {
-                $subscription->forceFill(['stripe_status' => 'canceled', 'ends_at' => now()])->save();
+                if (! $subscription instanceof BillingSubscription) {
+                    throw new TypeError('Billing reconciliation requires the configured Billing subscription model.');
+                }
+                $this->syncer->cancel($subscription, $account);
             }
         });
     }

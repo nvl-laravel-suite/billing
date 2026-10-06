@@ -4,13 +4,15 @@ declare(strict_types=1);
 
 namespace Nvl\Billing\Actions;
 
-use DomainException;
 use Illuminate\Contracts\Auth\Authenticatable;
 use InvalidArgumentException;
 use Nvl\Billing\Contracts\BillingGateway;
 use Nvl\Billing\Contracts\BillingManagementAccess;
 use Nvl\Billing\Contracts\UpdateBillingContactContract;
+use Nvl\Billing\Enums\BillingResponseCode;
+use Nvl\Billing\Exceptions\BillingException;
 use Nvl\Billing\Models\BillingAccount;
+use Nvl\Billing\Services\BillingEvents;
 use Nvl\Support\Tenancy\Contracts\TenantDirectory;
 use Nvl\Support\Tenancy\Enums\TenantStatus;
 use Nvl\Support\Tenancy\ValueObjects\TenantId;
@@ -27,18 +29,19 @@ final readonly class UpdateBillingContactAction implements UpdateBillingContactC
         private TenantDirectory $tenants,
         private BillingManagementAccess $management,
         private BillingGateway $gateway,
+        private BillingEvents $events,
     ) {}
 
     /** Change the contact only after the host authorizes this tenant. */
     public function execute(TenantId $tenant, Authenticatable $actor, string $name, string $email): BillingAccount
     {
         if (config('nvl-billing.enabled') !== true) {
-            throw new DomainException('Billing is disabled.');
+            throw BillingException::because(BillingResponseCode::FeatureDisabled, 'Billing is disabled.');
         }
 
         $this->management->assertCanManage($actor, $tenant);
         if ($this->tenants->find($tenant)->status !== TenantStatus::Active) {
-            throw new DomainException('Only active tenants may change billing contacts.');
+            throw BillingException::because(BillingResponseCode::TenantInactive, 'Only active tenants may change billing contacts.');
         }
 
         $name = trim($name);
@@ -49,18 +52,27 @@ final readonly class UpdateBillingContactAction implements UpdateBillingContactC
 
         $account = BillingAccount::query()->where('tenant_id', $tenant->value)->first();
         if ($account === null) {
-            return BillingAccount::query()->create([
-                'tenant_id' => $tenant->value,
-                'name' => $name,
-                'email' => $email,
-            ]);
+            return (new BillingAccount)->getConnection()->transaction(function () use ($tenant, $name, $email): BillingAccount {
+                $created = BillingAccount::query()->create(['tenant_id' => $tenant->value, 'name' => $name, 'email' => $email]);
+                $this->events->accountChanged($created, 'created');
+
+                return $created;
+            });
         }
 
         if ($account->stripe_id !== null) {
             $this->gateway->updateCustomer($account, $name, $email);
         }
 
-        $account->forceFill(['name' => $name, 'email' => $email])->save();
+        $account->getConnection()->transaction(function () use ($account, $name, $email): void {
+            $account->setRawAttributes($account->newQuery()->whereKey($account->getKey())->lockForUpdate()->firstOrFail()->getAttributes(), true);
+            $account->forceFill(['name' => $name, 'email' => $email]);
+            $changed = $account->isDirty(['name', 'email']);
+            $account->save();
+            if ($changed) {
+                $this->events->accountChanged($account, 'contact_updated');
+            }
+        });
 
         return $account;
     }

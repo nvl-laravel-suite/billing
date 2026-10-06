@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Nvl\Billing\Catalog;
 
 use InvalidArgumentException;
+use Nvl\Billing\Enums\BillingResponseCode;
+use Nvl\Billing\Exceptions\BillingException;
 
 /**
  * Resolves stable application plan keys to allowlisted Stripe prices.
@@ -18,19 +20,19 @@ final readonly class PlanCatalog
     public static function fromConfig(mixed $configured): self
     {
         if (! is_array($configured)) {
-            throw new InvalidArgumentException('billing.prices must be a plan map.');
+            throw BillingException::because(BillingResponseCode::InvalidConfiguration, 'billing.prices must be a plan map.');
         }
 
         $plans = [];
         foreach ($configured as $plan => $variants) {
             if (! is_string($plan) || ! is_array($variants)) {
-                throw new InvalidArgumentException('Each billing plan must contain named variants.');
+                throw BillingException::because(BillingResponseCode::InvalidConfiguration, 'Each billing plan must contain named variants.');
             }
 
             $prices = [];
             foreach ($variants as $interval => $price) {
                 if (! is_string($interval) || ! is_string($price)) {
-                    throw new InvalidArgumentException('Billing variants must map to Stripe Price IDs.');
+                    throw BillingException::because(BillingResponseCode::InvalidConfiguration, 'Billing variants must map to Stripe Price IDs.');
                 }
 
                 $prices[$interval] = $price;
@@ -39,7 +41,11 @@ final readonly class PlanCatalog
             $plans[$plan] = $prices;
         }
 
-        return new self($plans);
+        try {
+            return new self($plans);
+        } catch (InvalidArgumentException $exception) {
+            throw BillingException::because(BillingResponseCode::InvalidConfiguration, $exception->getMessage(), previous: $exception);
+        }
     }
 
     /**
@@ -73,12 +79,12 @@ final readonly class PlanCatalog
     /**
      * Resolve the configured Stripe Price ID for a plan variant.
      *
-     * @throws InvalidArgumentException When the variant is unavailable
+     * @throws BillingException When the variant is unavailable
      */
     public function priceFor(string $plan, string $interval): string
     {
         return $this->plans[$plan][$interval]
-            ?? throw new InvalidArgumentException('The requested billing plan variant is unavailable.');
+            ?? throw BillingException::because(BillingResponseCode::ProviderPayloadInvalid, 'The requested billing plan variant is unavailable.');
     }
 
     /** Return the application plan key for a known Stripe Price ID. */

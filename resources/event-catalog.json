@@ -1,0 +1,326 @@
+{
+  "schema_version": 1,
+  "package": "nvl/billing",
+  "documentation": "docs/events.md",
+  "implementation_status": "implemented; executable acceptance proof pending",
+  "events": [
+    {
+      "class": "Nvl\\Billing\\Events\\BillingAccountChanged",
+      "source": "packages/nvl/billing/src/Events/BillingAccountChanged.php",
+      "constructor_fields": [
+        {
+          "name": "accountId",
+          "type": "string",
+          "visibility": "public",
+          "required": true
+        },
+        {
+          "name": "tenantId",
+          "type": "string",
+          "visibility": "public",
+          "required": true
+        },
+        {
+          "name": "operation",
+          "type": "string",
+          "visibility": "public",
+          "required": true
+        },
+        {
+          "name": "schemaVersion",
+          "type": "int",
+          "visibility": "public",
+          "required": false,
+          "default_expression": "1"
+        }
+      ],
+      "public_fields": [
+        {
+          "name": "accountId",
+          "type": "string"
+        },
+        {
+          "name": "tenantId",
+          "type": "string"
+        },
+        {
+          "name": "operation",
+          "type": "string"
+        },
+        {
+          "name": "schemaVersion",
+          "type": "int"
+        }
+      ],
+      "kind": "value_object",
+      "schema_version": 1,
+      "trigger": "Account lifecycle/contact/customer transition persisted.",
+      "aliases": [],
+      "producers": [
+        {
+          "path": "packages/nvl/billing/src/Services/BillingEvents.php",
+          "trigger": "Account lifecycle/contact/customer transition persisted.",
+          "connection": "$account->getConnection()",
+          "construction_expression": "new BillingAccountChanged($account->id, $account->tenant_id, $operation)"
+        }
+      ],
+      "producer_callers": [
+        {
+          "path": "packages/nvl/billing/src/Actions/StartCheckoutAction.php",
+          "publisher_method": "BillingEvents::accountChanged",
+          "arguments": "$account, 'created'",
+          "connection": "Account writer getConnection()"
+        },
+        {
+          "path": "packages/nvl/billing/src/Actions/UpdateBillingContactAction.php",
+          "publisher_method": "BillingEvents::accountChanged",
+          "arguments": "$created, 'created'",
+          "connection": "Account writer getConnection()"
+        },
+        {
+          "path": "packages/nvl/billing/src/Actions/UpdateBillingContactAction.php",
+          "publisher_method": "BillingEvents::accountChanged",
+          "arguments": "$account, 'contact_updated'",
+          "connection": "Account writer getConnection()"
+        },
+        {
+          "path": "packages/nvl/billing/src/Services/BillingAccountStateUpdater.php",
+          "publisher_method": "BillingEvents::accountChanged",
+          "arguments": "$account, 'trial_consumed'",
+          "connection": "Account writer getConnection()"
+        },
+        {
+          "path": "packages/nvl/billing/src/Services/BillingAccountStateUpdater.php",
+          "publisher_method": "BillingEvents::accountChanged",
+          "arguments": "$account, 'checkout_cleared'",
+          "connection": "Account writer getConnection()"
+        },
+        {
+          "path": "packages/nvl/billing/src/Services/BillingCustomerSyncer.php",
+          "publisher_method": "BillingEvents::accountChanged",
+          "arguments": "$account, 'customer_updated'",
+          "connection": "Account writer getConnection()"
+        },
+        {
+          "path": "packages/nvl/billing/src/Services/BillingCustomerSyncer.php",
+          "publisher_method": "BillingEvents::accountChanged",
+          "arguments": "$account, 'customer_deleted'",
+          "connection": "Account writer getConnection()"
+        }
+      ],
+      "producer_operation_values": [
+        "created",
+        "contact_updated",
+        "customer_updated",
+        "customer_deleted",
+        "trial_consumed",
+        "checkout_cleared"
+      ],
+      "security_notes": [
+        "Account/subscription/tenant and Stripe session identifiers only. No contact name/email, checkout URL, payment method details or raw provider payload. tenantId is persisted account ownership; it is not listener authorization."
+      ],
+      "no_op_semantics": "Disabled Billing emits nothing. Unchanged contact/customer/subscription/item replays emit nothing. A checkout event requires the first persisted matching pending-attempt session. Webhook and reconciliation share writers; repeated cancellation preserves ends_at and emits no duplicate transition."
+    },
+    {
+      "class": "Nvl\\Billing\\Events\\BillingCheckoutStarted",
+      "source": "packages/nvl/billing/src/Events/BillingCheckoutStarted.php",
+      "constructor_fields": [
+        {
+          "name": "accountId",
+          "type": "string",
+          "visibility": "public",
+          "required": true
+        },
+        {
+          "name": "tenantId",
+          "type": "string",
+          "visibility": "public",
+          "required": true
+        },
+        {
+          "name": "attemptId",
+          "type": "string",
+          "visibility": "public",
+          "required": true
+        },
+        {
+          "name": "sessionId",
+          "type": "string",
+          "visibility": "public",
+          "required": true
+        },
+        {
+          "name": "schemaVersion",
+          "type": "int",
+          "visibility": "public",
+          "required": false,
+          "default_expression": "1"
+        }
+      ],
+      "public_fields": [
+        {
+          "name": "accountId",
+          "type": "string"
+        },
+        {
+          "name": "tenantId",
+          "type": "string"
+        },
+        {
+          "name": "attemptId",
+          "type": "string"
+        },
+        {
+          "name": "sessionId",
+          "type": "string"
+        },
+        {
+          "name": "schemaVersion",
+          "type": "int"
+        }
+      ],
+      "kind": "value_object",
+      "schema_version": 1,
+      "trigger": "Matching checkout session identity first persisted.",
+      "aliases": [],
+      "producers": [
+        {
+          "path": "packages/nvl/billing/src/Services/BillingEvents.php",
+          "trigger": "Matching checkout session identity first persisted.",
+          "connection": "$account->getConnection()",
+          "construction_expression": "new BillingCheckoutStarted($account->id, $account->tenant_id, $attemptId, $sessionId)"
+        }
+      ],
+      "producer_callers": [
+        {
+          "path": "packages/nvl/billing/src/Actions/StartCheckoutAction.php",
+          "publisher_method": "BillingEvents::checkoutStarted",
+          "arguments": "$account, $attempt->id, $session->id",
+          "connection": "Account writer getConnection()"
+        }
+      ],
+      "security_notes": [
+        "Account/subscription/tenant and Stripe session identifiers only. No contact name/email, checkout URL, payment method details or raw provider payload. tenantId is persisted account ownership; it is not listener authorization."
+      ],
+      "no_op_semantics": "Disabled Billing emits nothing. Unchanged contact/customer/subscription/item replays emit nothing. A checkout event requires the first persisted matching pending-attempt session. Webhook and reconciliation share writers; repeated cancellation preserves ends_at and emits no duplicate transition."
+    },
+    {
+      "class": "Nvl\\Billing\\Events\\BillingSubscriptionChanged",
+      "source": "packages/nvl/billing/src/Events/BillingSubscriptionChanged.php",
+      "constructor_fields": [
+        {
+          "name": "subscriptionId",
+          "type": "string",
+          "visibility": "public",
+          "required": true
+        },
+        {
+          "name": "accountId",
+          "type": "string",
+          "visibility": "public",
+          "required": true
+        },
+        {
+          "name": "tenantId",
+          "type": "string",
+          "visibility": "public",
+          "required": true
+        },
+        {
+          "name": "previousStatus",
+          "type": "?string",
+          "visibility": "public",
+          "required": true
+        },
+        {
+          "name": "currentStatus",
+          "type": "string",
+          "visibility": "public",
+          "required": true
+        },
+        {
+          "name": "schemaVersion",
+          "type": "int",
+          "visibility": "public",
+          "required": false,
+          "default_expression": "1"
+        }
+      ],
+      "public_fields": [
+        {
+          "name": "subscriptionId",
+          "type": "string"
+        },
+        {
+          "name": "accountId",
+          "type": "string"
+        },
+        {
+          "name": "tenantId",
+          "type": "string"
+        },
+        {
+          "name": "previousStatus",
+          "type": "?string"
+        },
+        {
+          "name": "currentStatus",
+          "type": "string"
+        },
+        {
+          "name": "schemaVersion",
+          "type": "int"
+        }
+      ],
+      "kind": "value_object",
+      "schema_version": 1,
+      "trigger": "Subscription/items state changed.",
+      "aliases": [],
+      "producers": [
+        {
+          "path": "packages/nvl/billing/src/Services/BillingEvents.php",
+          "trigger": "Subscription/items state changed.",
+          "connection": "$subscription->getConnection()",
+          "construction_expression": "new BillingSubscriptionChanged($subscription->id, $account->id, $account->tenant_id, $previousStatus, $subscription->stripe_status)"
+        }
+      ],
+      "producer_callers": [
+        {
+          "path": "packages/nvl/billing/src/Services/BillingSubscriptionSyncer.php",
+          "publisher_method": "BillingEvents::subscriptionChanged",
+          "arguments": "$record, $previousStatus",
+          "connection": "Subscription writer getConnection()"
+        },
+        {
+          "path": "packages/nvl/billing/src/Services/BillingSubscriptionSyncer.php",
+          "publisher_method": "BillingEvents::subscriptionChanged",
+          "arguments": "$current, $previousStatus",
+          "connection": "Subscription writer getConnection()"
+        }
+      ],
+      "security_notes": [
+        "Account/subscription/tenant and Stripe session identifiers only. No contact name/email, checkout URL, payment method details or raw provider payload. tenantId is persisted account ownership; it is not listener authorization."
+      ],
+      "no_op_semantics": "Disabled Billing emits nothing. Unchanged contact/customer/subscription/item replays emit nothing. A checkout event requires the first persisted matching pending-attempt session. Webhook and reconciliation share writers; repeated cancellation preserves ends_at and emits no duplicate transition."
+    }
+  ],
+  "value_types": [],
+  "aliases": [],
+  "publication": {
+    "publication": "The native host dispatcher receives the captured event after the supplied source connection outer commit, or immediately when that connection has no active transaction.",
+    "rollback": "Callbacks attach to the matching native connection and current nesting record; native outer/savepoint rollback discards the corresponding callbacks.",
+    "registration_failure": "Missing source transaction records fail before commit; Mail Notifications reports and drops unusable observations.",
+    "host_policy": "Host after-commit listeners and queue after_commit policies can add their own deferral after publication. Host transaction infrastructure and dispatcher bindings are preserved.",
+    "delivery_limit": "Local callbacks are not an outbox. Process exit between commit and callback can lose delivery; no crash durability or exactly-once delivery is promised.",
+    "cardinality": "One canonical object is dispatched per qualifying producer call. This is local publication, not cross-process deduplication or a guarantee that repeated observations are unique.",
+    "manual_producers": "Use Nvl\\Support\\Events\\DomainEventDispatcher::dispatch($event, $writerConnection). Native Event::dispatch() is immediate and has no package interception."
+  },
+  "security_notes": [
+    "Account/subscription/tenant and Stripe session identifiers only. No contact name/email, checkout URL, payment method details or raw provider payload. tenantId is persisted account ownership; it is not listener authorization."
+  ],
+  "no_op_semantics": "Disabled Billing emits nothing. Unchanged contact/customer/subscription/item replays emit nothing. A checkout event requires the first persisted matching pending-attempt session. Webhook and reconciliation share writers; repeated cancellation preserves ends_at and emits no duplicate transition.",
+  "notes": [
+    "Account operation values are created, contact_updated, customer_updated, customer_deleted, trial_consumed, checkout_cleared. Subscription currentStatus and previousStatus are persisted Stripe status strings, not a new enum. Stripe calls stay outside local multi-row transactions.",
+    "BillingEvents receives calls from StartCheckoutAction, UpdateBillingContactAction, BillingCustomerSyncer, BillingAccountStateUpdater and BillingSubscriptionSyncer. BillingReconciler and signed BillingWebhookController reach these same reusable writers."
+  ]
+}
