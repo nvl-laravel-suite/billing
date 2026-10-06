@@ -14,7 +14,7 @@ return new class extends Migration
     /** Use the central tenant directory connection for all billing records. */
     public function getConnection(): ?string
     {
-        $configured = config('billing.connection') ?? config('tenancy.connection');
+        $configured = config('nvl-billing.connection') ?? config('nvl-tenancy.connection');
 
         return is_string($configured) ? $configured : null;
     }

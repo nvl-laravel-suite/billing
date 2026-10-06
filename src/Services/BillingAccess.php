@@ -21,7 +21,7 @@ final readonly class BillingAccess
     /** Return one tenant's effective access without using ambient tenant context. */
     public function forTenant(TenantId $tenant): BillingSnapshot
     {
-        if (config('billing.enabled') !== true) {
+        if (config('nvl-billing.enabled') !== true) {
             return $this->snapshot(null, 'disabled');
         }
 
@@ -30,7 +30,7 @@ final readonly class BillingAccess
             return $this->snapshot(null, 'free');
         }
 
-        $type = config('billing.subscription_type', 'default');
+        $type = config('nvl-billing.subscription_type', 'default');
         if (! is_string($type) || $type === '') {
             throw new InvalidArgumentException('billing.subscription_type must be a nonempty string.');
         }
@@ -77,7 +77,7 @@ final readonly class BillingAccess
     /** Create a snapshot from one configured plan's feature policy. */
     private function snapshot(?string $plan, string $state): BillingSnapshot
     {
-        $path = $plan === null ? 'billing.access.free' : "billing.access.plans.{$plan}";
+        $path = $plan === null ? 'nvl-billing.access.free' : "nvl-billing.access.plans.{$plan}";
         $policy = config($path, []);
         if (! is_array($policy)) {
             throw new InvalidArgumentException('Billing access policy must be an array.');

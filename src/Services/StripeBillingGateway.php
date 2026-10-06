@@ -34,7 +34,7 @@ final class StripeBillingGateway implements BillingGateway
             throw new DomainException('Stripe did not return a billing customer.');
         }
 
-        $subscriptionType = config('billing.subscription_type', 'default');
+        $subscriptionType = config('nvl-billing.subscription_type', 'default');
         if (! is_string($subscriptionType) || $subscriptionType === '') {
             throw new InvalidArgumentException('billing.subscription_type must be a nonempty string.');
         }
@@ -48,7 +48,7 @@ final class StripeBillingGateway implements BillingGateway
 
         if ($trialDays > 0) {
             $subscriptionData['trial_end'] = (int) $expiresAt->addDays($trialDays)->timestamp;
-            if (config('billing.trial.require_payment_method') === false) {
+            if (config('nvl-billing.trial.require_payment_method') === false) {
                 $subscriptionData['trial_settings'] = ['end_behavior' => ['missing_payment_method' => 'cancel']];
             }
         }
@@ -59,7 +59,7 @@ final class StripeBillingGateway implements BillingGateway
             'mode' => 'subscription',
             'line_items' => [['price' => $price, 'quantity' => 1]],
             'subscription_data' => $subscriptionData,
-            'payment_method_collection' => config('billing.trial.require_payment_method') === false && $trialDays > 0
+            'payment_method_collection' => config('nvl-billing.trial.require_payment_method') === false && $trialDays > 0
                 ? 'if_required'
                 : 'always',
             'success_url' => $successUrl,

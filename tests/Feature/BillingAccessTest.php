@@ -7,8 +7,8 @@ use Nvl\Billing\Services\BillingAccess;
 use Nvl\Tenancy\ValueObjects\TenantId;
 
 it('grants only the purchased plan to its owning tenant', function (): void {
-    config()->set('billing.prices', ['pro' => ['monthly' => 'price_pro_month']]);
-    config()->set('billing.access', [
+    config()->set('nvl-billing.prices', ['pro' => ['monthly' => 'price_pro_month']]);
+    config()->set('nvl-billing.access', [
         'free' => ['features' => ['dashboard'], 'limits' => ['seats' => 1]],
         'plans' => ['pro' => ['features' => ['dashboard', 'reports'], 'limits' => ['seats' => 10]]],
     ]);
@@ -38,8 +38,8 @@ it('grants only the purchased plan to its owning tenant', function (): void {
 });
 
 it('fails closed for nonpaying subscription states and unknown prices', function (string $status, string $price, bool $expected): void {
-    config()->set('billing.prices', ['pro' => ['monthly' => 'price_pro_month']]);
-    config()->set('billing.access', [
+    config()->set('nvl-billing.prices', ['pro' => ['monthly' => 'price_pro_month']]);
+    config()->set('nvl-billing.access', [
         'free' => ['features' => [], 'limits' => []],
         'plans' => ['pro' => ['features' => ['reports'], 'limits' => []]],
     ]);
@@ -69,8 +69,8 @@ it('fails closed for nonpaying subscription states and unknown prices', function
 ]);
 
 it('uses a new active subscription after an older one was canceled', function (): void {
-    config()->set('billing.prices', ['pro' => ['monthly' => 'price_pro_month']]);
-    config()->set('billing.access.plans.pro', ['features' => ['reports'], 'limits' => []]);
+    config()->set('nvl-billing.prices', ['pro' => ['monthly' => 'price_pro_month']]);
+    config()->set('nvl-billing.access.plans.pro', ['features' => ['reports'], 'limits' => []]);
     $tenantId = new TenantId('1bc8245c-81fe-4ffb-b90a-99088939ed5e');
     $account = BillingAccount::query()->create(['tenant_id' => $tenantId->value, 'email' => 'billing@example.test']);
     $account->subscriptions()->create([

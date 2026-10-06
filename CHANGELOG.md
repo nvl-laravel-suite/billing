@@ -4,6 +4,13 @@ All notable changes to `nvl/billing` are documented here.
 
 ## [Unreleased]
 
+### Changed
+
+- Prepare lockstep major 5 with required and development NVL peer floors of `^5.0`. This candidate has not been tagged or published.
+- Gate Cashier model replacement, route adoption and package webhook ingress independently.
+- Remain an optional installation outside the 21-member suite metapackage.
+- Review [UPGRADING.md](UPGRADING.md) before adopting the new names and infrastructure boundaries.
+
 ## [2.0.2] - 2026-09-28
 
 ### Fixed

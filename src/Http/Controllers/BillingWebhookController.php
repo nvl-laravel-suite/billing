@@ -29,7 +29,7 @@ final class BillingWebhookController
         if (! is_array($payload) || ! is_string($payload['id'] ?? null) || ! is_string($payload['type'] ?? null)) {
             return response()->json(['message' => 'Invalid Stripe event.'], 400);
         }
-        $configuredConnection = config('billing.connection') ?? config('tenancy.connection');
+        $configuredConnection = config('nvl-billing.connection') ?? config('nvl-tenancy.connection');
         $connection = is_string($configuredConnection) ? $configuredConnection : null;
 
         return DB::connection($connection)->transaction(function () use ($payload, $connection): Response {

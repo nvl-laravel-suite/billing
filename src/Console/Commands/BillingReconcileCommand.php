@@ -20,7 +20,7 @@ final class BillingReconcileCommand extends Command
     /** Reconcile one tenant or page through all Stripe-backed accounts. */
     public function handle(BillingReconciler $reconciler): int
     {
-        if (config('billing.enabled') !== true) {
+        if (config('nvl-billing.enabled') !== true) {
             throw new DomainException('Billing is disabled.');
         }
 

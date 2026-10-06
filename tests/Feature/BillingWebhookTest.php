@@ -15,7 +15,7 @@ beforeEach(function (): void {
     if (! class_exists(PaymentsServiceProvider::class)) {
         return;
     }
-    config(['payments.enabled' => true]);
+    config(['nvl-payments.enabled' => true]);
     app()->register(PaymentsServiceProvider::class, true);
     Route::getRoutes()->refreshNameLookups();
     expect(Route::getRoutes()->getByName('nvl.payments.webhook'))->not->toBeNull();

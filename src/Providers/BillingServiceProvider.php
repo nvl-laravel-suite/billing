@@ -23,28 +23,32 @@ use Nvl\Billing\Services\StripeSubscriptionReader;
 use Nvl\Support\Doctor\DoctorCheck;
 use Nvl\Support\Doctor\PackageDoctorContributor;
 use Nvl\Support\Traits\MergesPackageConfiguration;
+use Nvl\Support\Traits\RegistersNamespacedResources;
 
 /** Registers the isolated Cashier models and opt-in Billing resources. */
 final class BillingServiceProvider extends ServiceProvider
 {
     use MergesPackageConfiguration;
+    use RegistersNamespacedResources;
 
     /** Register Billing's configuration and suppress Cashier's global routes. */
     public function register(): void
     {
         PackageDoctorContributor::register($this->app, 'nvl/billing', function (): array {
-            if (config('billing.enabled') !== true) {
-                return [new DoctorCheck('enabled', 'info', true, 'Billing is disabled; enable it explicitly before configuring its integrations.')];
+            if (config('nvl-billing.enabled') !== true) {
+                return [...$this->app->make(BillingDoctor::class)->adoptionChecks(), new DoctorCheck('enabled', 'info', true, 'Billing is disabled; enable it explicitly before configuring its integrations.')];
             }
 
             $report = $this->app->make(BillingDoctor::class)->inspect();
 
-            return PackageDoctorContributor::booleanChecks($report['checks'], 'nvl:billing:doctor');
+            return [...$this->app->make(BillingDoctor::class)->adoptionChecks(), ...PackageDoctorContributor::booleanChecks($report['checks'], 'nvl:billing:doctor')];
         });
 
-        $this->mergePackageConfiguration(__DIR__.'/../../config/billing.php', 'billing');
-        Cashier::ignoreRoutes();
-        $this->app->singleton(PlanCatalog::class, static fn (): PlanCatalog => PlanCatalog::fromConfig(config('billing.prices', [])));
+        $this->mergePackageConfiguration(__DIR__.'/../../config/nvl-billing.php', 'billing');
+        if (config('nvl-billing.adoption.cashier_routes') === true) {
+            Cashier::ignoreRoutes();
+        }
+        $this->app->singleton(PlanCatalog::class, static fn (): PlanCatalog => PlanCatalog::fromConfig(config('nvl-billing.prices', [])));
         $this->app->bindIf(BillingManagementAccess::class, DenyBillingManagementAccess::class);
         $this->app->bindIf(BillingGateway::class, StripeBillingGateway::class);
         $this->app->bindIf(SubscriptionReader::class, StripeSubscriptionReader::class);
@@ -56,8 +60,8 @@ final class BillingServiceProvider extends ServiceProvider
         $path = __DIR__.'/../../database/migrations/billing';
         $this->commands([BillingDoctorCommand::class, BillingReconcileCommand::class]);
 
-        if (config('billing.enabled') === true) {
-            if (config('tenancy.enabled') !== true) {
+        if (config('nvl-billing.enabled') === true) {
+            if (config('nvl-tenancy.enabled') !== true) {
                 throw new InvalidArgumentException('Tenancy must be enabled before Billing.');
             }
 
@@ -65,21 +69,25 @@ final class BillingServiceProvider extends ServiceProvider
                 throw new InvalidArgumentException('A Stripe webhook signing secret is required when Billing is enabled.');
             }
 
-            Cashier::useCustomerModel(BillingAccount::class);
-            Cashier::useSubscriptionModel(BillingSubscription::class);
-            Cashier::useSubscriptionItemModel(BillingSubscriptionItem::class);
-            $this->loadRoutesFrom(__DIR__.'/../../routes/web.php');
+            if (config('nvl-billing.adoption.cashier_models') === true) {
+                Cashier::useCustomerModel(BillingAccount::class);
+                Cashier::useSubscriptionModel(BillingSubscription::class);
+                Cashier::useSubscriptionItemModel(BillingSubscriptionItem::class);
+            }
+            if (config('nvl-billing.routes.webhook.enabled') === true) {
+                $this->loadRoutesFrom(__DIR__.'/../../routes/web.php');
+            }
         }
 
         $this->publishes([
-            __DIR__.'/../../config/billing.php' => config_path('billing.php'),
+            __DIR__.'/../../config/nvl-billing.php' => config_path('nvl-billing.php'),
         ], 'billing-config');
         $this->publishes([
             __DIR__.'/../../resources/boost/skills/nvl-billing' => base_path('.agents/skills/nvl-billing'),
         ], 'billing-skills');
         $this->publishesMigrations([$path => database_path('migrations')], 'billing-migrations');
 
-        if (config('billing.enabled') === true && config('billing.migrations.enabled') === true) {
+        if (config('nvl-billing.enabled') === true && config('nvl-billing.migrations.enabled') === true) {
             $this->loadMigrationsFrom($path);
         }
     }

@@ -48,7 +48,7 @@ final readonly class StartCheckoutAction
         string $successUrl,
         string $cancelUrl,
     ): CheckoutSession {
-        if (config('billing.enabled') !== true) {
+        if (config('nvl-billing.enabled') !== true) {
             throw new DomainException('Billing is disabled.');
         }
 
@@ -108,7 +108,7 @@ final readonly class StartCheckoutAction
     private function reserveAttempt(BillingAccount $account, string $price): CheckoutAttempt
     {
         $account = BillingAccount::query()->whereKey($account->id)->lockForUpdate()->firstOrFail();
-        $type = config('billing.subscription_type', 'default');
+        $type = config('nvl-billing.subscription_type', 'default');
         if (! is_string($type) || $type === '') {
             throw new InvalidArgumentException('billing.subscription_type must be a nonempty string.');
         }
@@ -155,7 +155,7 @@ final readonly class StartCheckoutAction
     /** Grant the configured free trial only to a tenant that has not used one. */
     private function trialDays(BillingAccount $account): int
     {
-        $days = config('billing.trial.days', 0);
+        $days = config('nvl-billing.trial.days', 0);
         if (! is_int($days) || ($days !== 0 && $days < 2)) {
             throw new InvalidArgumentException('billing.trial.days must be zero or at least two.');
         }

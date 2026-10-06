@@ -17,8 +17,8 @@ use Nvl\Tenancy\Models\Tenant;
 use Nvl\Tenancy\ValueObjects\TenantId;
 
 it('authorizes one checkout attempt and reuses its pending session', function (): void {
-    config()->set('billing.prices', ['pro' => ['monthly' => 'price_pro_month']]);
-    config()->set('billing.trial.days', 14);
+    config()->set('nvl-billing.prices', ['pro' => ['monthly' => 'price_pro_month']]);
+    config()->set('nvl-billing.trial.days', 14);
     $tenant = Tenant::query()->create(['name' => 'Acme', 'status' => TenantStatus::Active]);
     $tenantId = new TenantId($tenant->id);
     $actor = new GenericUser(['id' => 'user-1']);
@@ -61,7 +61,7 @@ it('authorizes one checkout attempt and reuses its pending session', function ()
 });
 
 it('denies billing management until the host supplies an authorization adapter', function (): void {
-    config()->set('billing.prices', ['pro' => ['monthly' => 'price_pro_month']]);
+    config()->set('nvl-billing.prices', ['pro' => ['monthly' => 'price_pro_month']]);
     $tenant = Tenant::query()->create(['name' => 'Acme', 'status' => TenantStatus::Active]);
 
     expect(fn () => app(StartCheckoutAction::class)->execute(
@@ -103,7 +103,7 @@ it('creates a portal entry only for an authorized tenant with a Stripe customer'
 });
 
 it('rejects disabled billing, suspended tenants, and invalid checkout email', function (): void {
-    config()->set('billing.prices', ['pro' => ['monthly' => 'price_pro_month']]);
+    config()->set('nvl-billing.prices', ['pro' => ['monthly' => 'price_pro_month']]);
     $tenant = Tenant::query()->create(['name' => 'Acme', 'status' => TenantStatus::Suspended]);
     $tenantId = new TenantId($tenant->id);
     $actor = new GenericUser(['id' => 'manager']);
@@ -114,10 +114,10 @@ it('rejects disabled billing, suspended tenants, and invalid checkout email', fu
     $checkout = app(StartCheckoutAction::class);
     $start = fn (string $email): CheckoutSession => $checkout->execute($tenantId, $actor, $email, 'pro', 'monthly', 'https://app.test/success', 'https://app.test/cancel');
 
-    config()->set('billing.enabled', false);
+    config()->set('nvl-billing.enabled', false);
     expect(fn () => $start('billing@example.test'))->toThrow(DomainException::class, 'Billing is disabled.');
 
-    config()->set('billing.enabled', true);
+    config()->set('nvl-billing.enabled', true);
     expect(fn () => $start('billing@example.test'))->toThrow(DomainException::class, 'Only active tenants');
 
     $tenant->update(['status' => TenantStatus::Active]);
@@ -125,7 +125,7 @@ it('rejects disabled billing, suspended tenants, and invalid checkout email', fu
 });
 
 it('blocks duplicate subscriptions and conflicting pending checkouts', function (): void {
-    config()->set('billing.prices', ['pro' => ['monthly' => 'price_pro_month', 'yearly' => 'price_pro_year']]);
+    config()->set('nvl-billing.prices', ['pro' => ['monthly' => 'price_pro_month', 'yearly' => 'price_pro_year']]);
     $tenant = Tenant::query()->create(['name' => 'Acme', 'status' => TenantStatus::Active]);
     $tenantId = new TenantId($tenant->id);
     $account = BillingAccount::query()->create(['tenant_id' => $tenantId->value, 'email' => 'billing@example.test']);
@@ -148,6 +148,6 @@ it('blocks duplicate subscriptions and conflicting pending checkouts', function 
     expect($start)->toThrow(DomainException::class, 'another plan is already pending');
 
     $account->forceFill(['pending_checkout_attempt_id' => null])->save();
-    config()->set('billing.trial.days', 1);
+    config()->set('nvl-billing.trial.days', 1);
     expect($start)->toThrow(InvalidArgumentException::class, 'zero or at least two');
 });

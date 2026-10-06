@@ -33,10 +33,13 @@ abstract class BillingTestCase extends TestCase
         $app['config']->set([
             'database.default' => 'sqlite',
             'database.connections.sqlite.database' => ':memory:',
-            'tenancy.enabled' => true,
-            'tenancy.migrations.enabled' => true,
-            'billing.enabled' => true,
-            'billing.migrations.enabled' => true,
+            'nvl-tenancy.enabled' => true,
+            'nvl-tenancy.migrations.enabled' => true,
+            'nvl-billing.enabled' => true,
+            'nvl-billing.adoption.cashier_models' => true,
+            'nvl-billing.adoption.cashier_routes' => true,
+            'nvl-billing.routes.webhook.enabled' => true,
+            'nvl-billing.migrations.enabled' => true,
             'cashier.webhook.secret' => 'whsec_billing_test',
             'cashier.secret' => 'sk_test_billing',
         ]);

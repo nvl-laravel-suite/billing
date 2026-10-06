@@ -8,43 +8,45 @@ For support, [open an issue](https://github.com/nvl-laravel-suite/billing/issues
 
 | Item | Value |
 |---|---|
-| Installed through | `composer require nvl/billing:^2.0` |
+| Installed through | `composer require nvl/billing:^5.0` |
 | Module identifier | `nvl/billing` |
 | PHP namespace | `Nvl\Billing` |
 | Service provider | `Nvl\Billing\Providers\BillingServiceProvider` |
-| Configuration | `config/billing.php` |
+| Configuration | `config/nvl-billing.php` |
 
 ## Purpose and boundaries
 
 Billing owns one Stripe customer per tenant, subscription state, Checkout attempts, consumed trial markers, and a read-only feature snapshot. It uses Laravel Cashier for Stripe subscription synchronization. It does not bill individual users, define an application catalog, measure usage, authorize app features by itself, or provide a customer-facing billing UI. The host application owns pricing presentation, billing administration policy, and feature enforcement.
 
-The package requires `nvl/core`, `nvl/tenancy`, and `laravel/cashier`. Billing data stays on the configured central connection. A tenant has one billing account, independent of the user's login model. The 3.x `nvl/laravel-suite` metapackage does not install Billing; add it only to applications that need subscriptions. Billing uses Cashier's process-global customer and subscription model registration, so do not load another independent Cashier billing integration in the same Laravel application.
+The package requires `nvl/core`, `nvl/tenancy`, and `laravel/cashier`. Billing data stays on the configured central connection. A tenant has one billing account, independent of the user's login model. The 3.x `nvl/laravel-suite` metapackage does not install Billing; add it only to applications that need subscriptions. Explicit Cashier model adoption changes process-global registration; coordinate it with any other Cashier integration in the host application.
+
+Global Cashier adoption is opt-in: `nvl-billing.adoption.cashier_models` replaces the three Cashier models, while `adoption.cashier_routes` suppresses native Cashier routes. Both default to `false`. NVL webhook ingress is independently enabled with `nvl-billing.routes.webhook.enabled`; enabling Billing services alone preserves host Cashier registration. Doctor reports active adoption and its targets.
 
 ## Requirements and installation
 
 Use PHP 8.4+, Laravel 13, Stripe, and an active Tenancy tenant directory. Install the published package from Packagist, then configure it in the host application:
 
 ```bash
-composer require nvl/billing:^2.0
-php artisan vendor:publish --tag=billing-config
-php artisan vendor:publish --tag=billing-skills
-php artisan vendor:publish --tag=billing-migrations
+composer require nvl/billing:^5.0
+php artisan vendor:publish --tag=nvl-billing-config
+php artisan vendor:publish --tag=nvl-billing-skills
+php artisan vendor:publish --tag=nvl-billing-migrations
 php artisan migrate
 php artisan nvl:billing:doctor --strict
 ```
 
 Set `STRIPE_KEY`, `STRIPE_SECRET`, and `STRIPE_WEBHOOK_SECRET` through the host application's Cashier configuration. Register the Stripe webhook endpoint at `POST /nvl/billing/stripe/webhook`, subscribe at least to `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `customer.updated`, and `customer.deleted`, and keep Stripe signature verification enabled. The route is registered only when `billing.enabled=true`. Test it with Stripe test mode before accepting real customers. Use HTTPS in production.
 
-Billing migrations are opt-in. For automatic vendor loading, set `billing.migrations.enabled=true` and do not publish `billing-migrations`. For host-owned migrations, publish `billing-migrations`, leave `billing.migrations.enabled=false`, and maintain the copied migrations in the application. Never run both sources; publishing retimestamps migrations. Enable `billing.enabled=true` only after schema, Stripe credentials, webhook secret, and the host's management binding are ready.
+Billing migrations are opt-in. For automatic vendor loading, set `nvl-billing.migrations.enabled=true` and do not publish `nvl-billing-migrations`. For host-owned migrations, publish `nvl-billing-migrations`, leave `nvl-billing.migrations.enabled=false`, and maintain the copied migrations in the application. Never run both sources; publishing retimestamps migrations. Enable `billing.enabled=true` only after schema, Stripe credentials, webhook secret, and the host's management binding are ready.
 
 ## Configuration and Stripe catalog
 
-Publish `billing-config` and set stable plan keys to Stripe Price IDs. Configure features and limits in application code; Stripe Product and Price objects determine charges, while this allowlist determines which prices can be selected and which local plan each synced Price grants.
+Publish `nvl-billing-config` and set stable plan keys to Stripe Price IDs. Configure features and limits in application code; Stripe Product and Price objects determine charges, while this allowlist determines which prices can be selected and which local plan each synced Price grants.
 
 ```php
 return [
     'enabled' => true,
-    'connection' => null, // Defaults to tenancy.connection.
+    'connection' => null, // Defaults to nvl-tenancy.connection.
     'migrations' => ['enabled' => false],
     'subscription_type' => 'default',
     'prices' => [
@@ -102,7 +104,7 @@ Run `php artisan nvl:doctor --strict --format=json` to combine the read-only che
 
 ## Next major: isolated schema identities
 
-Use `billing.tables.<logical-key>` for every table and `billing.connection` for its database connection. Null connection inherits `nvl-core.connection`, then Laravel's default. Tables are resolved at runtime by the package table definition helper.
+Use `nvl-billing.tables.<logical-key>` for every table and `nvl-billing.connection` for its database connection. Null connection inherits `nvl-core.connection`, then Laravel's default. Tables are resolved at runtime by the package table definition helper.
 
 | Logical key | New default | Previous name |
 | --- | --- | --- |
@@ -111,4 +113,8 @@ Use `billing.tables.<logical-key>` for every table and `billing.connection` for 
 | `subscription_items` | `nvl_billing_subscription_items` | `nvl_billing_subscription_items` |
 | `webhook_events` | `nvl_billing_webhook_events` | `nvl_billing_webhook_events` |
 
-Migration filenames contain `nvl_billing_`. Existing installations must complete the upgrade in `UPGRADING.md` before running new migrations. A pending creator rejects an existing target before any migration in the batch runs; legacy storage with old history needs an ownership decision.
+Migration filenames contain `nvl_billing_`. Existing installations must complete the upgrade in `UPGRADING.md` before running new migrations. A pending creator rejects an existing target before that owned migration runs; use `nvl:schema:preflight` for an explicit whole-batch check; legacy storage with old history needs an ownership decision.
+
+## Canonical configuration ownership
+
+Use `nvl-billing` settings in `config/nvl-billing.php` and canonical package environment names. Old generic roots are foreign unless an upgrading NVL host explicitly selects them in Core's default-off compatibility. Canonical false/null/empty values win; no old roots are populated or written back. Keep logical package/resource IDs unchanged. Review [Core's rename inventory and cache/worker cutover](https://github.com/nvl-laravel-suite/core/blob/main/UPGRADING.md#major-5-canonical-configuration-and-environment).

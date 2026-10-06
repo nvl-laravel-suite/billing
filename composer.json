@@ -3,15 +3,20 @@
     "description": "Tenant-owned Stripe subscription billing for Laravel applications",
     "type": "library",
     "license": "MIT",
-    "keywords": ["laravel", "billing", "stripe", "subscriptions"],
+    "keywords": [
+        "laravel",
+        "billing",
+        "stripe",
+        "subscriptions"
+    ],
     "require": {
         "php": "^8.4",
         "ext-filter": "*",
         "laravel/framework": "^13.0",
         "laravel/cashier": "^16.0",
         "nesbot/carbon": "^3.0",
-        "nvl/core": "^2.0",
-        "nvl/tenancy": "^2.0",
+        "nvl/core": "^5.0",
+        "nvl/tenancy": "^5.0",
         "symfony/http-foundation": "^7.0|^8.0"
     },
     "require-dev": {
@@ -24,30 +29,57 @@
         "stripe/stripe-php": "^21.0"
     },
     "autoload": {
-        "psr-4": {"Nvl\\Billing\\": "src/"}
+        "psr-4": {
+            "Nvl\\Billing\\": "src/"
+        }
     },
     "autoload-dev": {
-        "psr-4": {"Nvl\\Billing\\Tests\\": "tests/"}
+        "psr-4": {
+            "Nvl\\Billing\\Tests\\": "tests/"
+        }
     },
     "scripts": {
         "analyse": "phpstan analyse --memory-limit=2G",
         "format": "pint --parallel --format agent",
         "format:test": "pint --parallel --test --format agent",
-        "quality": ["@format:test", "@analyse", "@test"],
+        "quality": [
+            "@format:test",
+            "@analyse",
+            "@test"
+        ],
         "test": "pest --compact"
     },
     "extra": {
-        "branch-alias": {"dev-main": "2.x-dev"},
+        "branch-alias": {
+            "dev-main": "5.x-dev"
+        },
         "laravel": {
-            "providers": ["Nvl\\Billing\\Providers\\BillingServiceProvider"]
+            "providers": [
+                "Nvl\\Billing\\Providers\\BillingServiceProvider"
+            ]
         }
     },
     "config": {
-        "allow-plugins": {"pestphp/pest-plugin": true},
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        },
         "sort-packages": true
     },
     "archive": {
-        "exclude": ["/.temp", "/build", "/coverage", "/.phpunit.cache", "/.phpunit.result.cache", "/phpstan.neon.dist", "/phpunit.xml.dist", "/tests", "/vendor", "/composer.lock"]
+        "exclude": [
+            "/.temp",
+            "/build",
+            "/coverage",
+            "/.phpunit.cache",
+            "/.phpunit.result.cache",
+            "/phpstan.neon.dist",
+            "/phpunit.xml.dist",
+            "/tests",
+            "/vendor",
+            "/composer.lock",
+            "/.DS_Store",
+            "/**/.DS_Store"
+        ]
     },
     "minimum-stability": "stable",
     "prefer-stable": true

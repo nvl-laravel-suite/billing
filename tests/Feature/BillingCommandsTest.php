@@ -31,13 +31,13 @@ it('reconciles one selected tenant from the command line', function (): void {
 });
 
 it('reports a healthy enabled billing configuration', function (): void {
-    config()->set('billing.prices', ['pro' => ['monthly' => 'price_pro_month']]);
+    config()->set('nvl-billing.prices', ['pro' => ['monthly' => 'price_pro_month']]);
 
     $this->artisan('nvl:billing:doctor', ['--strict' => true])->assertSuccessful();
 });
 
 it('fails strict doctor checks for an invalid price catalog without exposing credentials', function (): void {
-    config()->set('billing.prices', ['pro' => ['monthly' => 'invalid_price']]);
+    config()->set('nvl-billing.prices', ['pro' => ['monthly' => 'invalid_price']]);
 
     $this->artisan('nvl:billing:doctor', ['--strict' => true, '--format' => 'json'])
         ->expectsOutputToContain('"price_catalog":false')

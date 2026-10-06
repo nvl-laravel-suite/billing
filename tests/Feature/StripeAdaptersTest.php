@@ -64,7 +64,7 @@ it('creates a Stripe customer and an idempotent hosted subscription checkout', f
 });
 
 it('configures a cardless trial and delegates portal and contact updates to Stripe', function (): void {
-    config()->set('billing.trial.require_payment_method', false);
+    config()->set('nvl-billing.trial.require_payment_method', false);
     $account = BillingAccount::query()->forceCreate([
         'tenant_id' => '1bc8245c-81fe-4ffb-b90a-99088939ed5e',
         'email' => 'billing@example.test',

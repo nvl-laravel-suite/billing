@@ -25,7 +25,7 @@ final readonly class BillingPortal
     /** Return a hosted portal URL without exposing another tenant's customer. */
     public function url(TenantId $tenant, Authenticatable $actor, string $returnUrl): string
     {
-        if (config('billing.enabled') !== true) {
+        if (config('nvl-billing.enabled') !== true) {
             throw new DomainException('Billing is disabled.');
         }
 

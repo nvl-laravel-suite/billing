@@ -27,7 +27,7 @@ final readonly class UpdateBillingContactAction
     /** Change the contact only after the host authorizes this tenant. */
     public function execute(TenantId $tenant, Authenticatable $actor, string $name, string $email): BillingAccount
     {
-        if (config('billing.enabled') !== true) {
+        if (config('nvl-billing.enabled') !== true) {
             throw new DomainException('Billing is disabled.');
         }
 
