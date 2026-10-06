@@ -12,7 +12,11 @@ use Nvl\Billing\Models\BillingAccount;
 use Nvl\Support\Tenancy\Contracts\TenantDirectory;
 use Nvl\Support\Tenancy\ValueObjects\TenantId;
 
-/** Creates a portal entry for an authorized tenant billing administrator. */
+/**
+ * Creates a portal entry for an authorized tenant billing administrator.
+ *
+ * @api
+ */
 final readonly class BillingPortal
 {
     /** Inject permission, tenant, and Stripe boundaries. */

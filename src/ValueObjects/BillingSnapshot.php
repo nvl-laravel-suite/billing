@@ -4,7 +4,11 @@ declare(strict_types=1);
 
 namespace Nvl\Billing\ValueObjects;
 
-/** A tenant's resolved subscription and application access at one instant. */
+/**
+ * A tenant's resolved subscription and application access at one instant.
+ *
+ * @api
+ */
 final readonly class BillingSnapshot
 {
     /**

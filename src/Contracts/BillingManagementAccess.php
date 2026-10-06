@@ -7,7 +7,11 @@ namespace Nvl\Billing\Contracts;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Nvl\Support\Tenancy\ValueObjects\TenantId;
 
-/** Authorizes an actor to change one tenant's billing relationship. */
+/**
+ * Authorizes an actor to change one tenant's billing relationship.
+ *
+ * @api
+ */
 interface BillingManagementAccess
 {
     /** Assert that the actor may manage billing for the selected tenant. */

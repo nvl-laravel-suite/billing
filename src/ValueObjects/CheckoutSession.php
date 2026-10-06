@@ -6,7 +6,11 @@ namespace Nvl\Billing\ValueObjects;
 
 use Carbon\CarbonImmutable;
 
-/** Names a hosted Checkout session returned for one tenant attempt. */
+/**
+ * Names a hosted Checkout session returned for one tenant attempt.
+ *
+ * @api
+ */
 final readonly class CheckoutSession
 {
     /** Store the session identity, redirect URL, and expiry. */

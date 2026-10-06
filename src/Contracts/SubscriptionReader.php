@@ -4,7 +4,11 @@ declare(strict_types=1);
 
 namespace Nvl\Billing\Contracts;
 
-/** Reads the complete current Stripe subscription list for one customer. */
+/**
+ * Reads the complete current Stripe subscription list for one customer.
+ *
+ * @api
+ */
 interface SubscriptionReader
 {
     /**

@@ -14,7 +14,11 @@ use Nvl\Support\Tenancy\Contracts\TenantDirectory;
 use Nvl\Support\Tenancy\Enums\TenantStatus;
 use Nvl\Support\Tenancy\ValueObjects\TenantId;
 
-/** Updates the tenant-owned contact used for Stripe billing correspondence. */
+/**
+ * Updates the tenant-owned contact used for Stripe billing correspondence.
+ *
+ * @api
+ */
 final readonly class UpdateBillingContactAction
 {
     /** Inject tenant, authorization, and Stripe boundaries. */

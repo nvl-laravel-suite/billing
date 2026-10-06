@@ -12,7 +12,11 @@ use Nvl\Billing\Models\BillingSubscriptionItem;
 use Nvl\Billing\ValueObjects\BillingSnapshot;
 use Nvl\Support\Tenancy\ValueObjects\TenantId;
 
-/** Resolves tenant features and limits from Cashier's synchronized state. */
+/**
+ * Resolves tenant features and limits from Cashier's synchronized state.
+ *
+ * @api
+ */
 final readonly class BillingAccess
 {
     /** Create the read-only access resolver with the configured Price catalog. */

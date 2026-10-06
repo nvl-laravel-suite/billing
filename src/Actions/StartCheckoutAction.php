@@ -22,7 +22,11 @@ use Nvl\Support\Tenancy\Contracts\TenantDirectory;
 use Nvl\Support\Tenancy\Enums\TenantStatus;
 use Nvl\Support\Tenancy\ValueObjects\TenantId;
 
-/** Starts one tenant's hosted subscription Checkout without duplicate sessions. */
+/**
+ * Starts one tenant's hosted subscription Checkout without duplicate sessions.
+ *
+ * @api
+ */
 final readonly class StartCheckoutAction
 {
     /** Inject the tenant, permission, catalog, and Stripe boundaries. */

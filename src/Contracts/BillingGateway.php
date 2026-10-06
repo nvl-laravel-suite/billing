@@ -8,7 +8,11 @@ use Carbon\CarbonImmutable;
 use Nvl\Billing\Models\BillingAccount;
 use Nvl\Billing\ValueObjects\CheckoutSession;
 
-/** Creates Stripe-hosted sessions behind a testable billing boundary. */
+/**
+ * Creates Stripe-hosted sessions behind a testable billing boundary.
+ *
+ * @api
+ */
 interface BillingGateway
 {
     /** Start or recover one idempotent Checkout attempt. */

@@ -28,6 +28,8 @@ use Nvl\Support\Config\PackageStorage;
  * @property string|null $pending_checkout_url
  * @property CarbonImmutable|null $pending_checkout_expires_at
  * @property int|null $pending_checkout_trial_days
+ *
+ * @api
  */
 final class BillingAccount extends Model
 {
