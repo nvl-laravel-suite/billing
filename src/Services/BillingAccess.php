@@ -10,7 +10,7 @@ use Nvl\Billing\Models\BillingAccount;
 use Nvl\Billing\Models\BillingSubscription;
 use Nvl\Billing\Models\BillingSubscriptionItem;
 use Nvl\Billing\ValueObjects\BillingSnapshot;
-use Nvl\Tenancy\ValueObjects\TenantId;
+use Nvl\Support\Tenancy\ValueObjects\TenantId;
 
 /** Resolves tenant features and limits from Cashier's synchronized state. */
 final readonly class BillingAccess

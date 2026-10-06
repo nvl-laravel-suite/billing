@@ -16,9 +16,12 @@ use Nvl\Billing\Contracts\SubscriptionReader;
 use Nvl\Billing\Models\BillingAccount;
 use Nvl\Billing\Models\BillingSubscription;
 use Nvl\Billing\Models\BillingSubscriptionItem;
+use Nvl\Billing\Services\BillingDoctor;
 use Nvl\Billing\Services\DenyBillingManagementAccess;
 use Nvl\Billing\Services\StripeBillingGateway;
 use Nvl\Billing\Services\StripeSubscriptionReader;
+use Nvl\Support\Doctor\DoctorCheck;
+use Nvl\Support\Doctor\PackageDoctorContributor;
 use Nvl\Support\Traits\MergesPackageConfiguration;
 
 /** Registers the isolated Cashier models and opt-in Billing resources. */
@@ -29,6 +32,16 @@ final class BillingServiceProvider extends ServiceProvider
     /** Register Billing's configuration and suppress Cashier's global routes. */
     public function register(): void
     {
+        PackageDoctorContributor::register($this->app, 'nvl/billing', function (): array {
+            if (config('billing.enabled') !== true) {
+                return [new DoctorCheck('enabled', 'info', true, 'Billing is disabled; enable it explicitly before configuring its integrations.')];
+            }
+
+            $report = $this->app->make(BillingDoctor::class)->inspect();
+
+            return PackageDoctorContributor::booleanChecks($report['checks'], 'nvl:billing:doctor');
+        });
+
         $this->mergePackageConfiguration(__DIR__.'/../../config/billing.php', 'billing');
         Cashier::ignoreRoutes();
         $this->app->singleton(PlanCatalog::class, static fn (): PlanCatalog => PlanCatalog::fromConfig(config('billing.prices', [])));

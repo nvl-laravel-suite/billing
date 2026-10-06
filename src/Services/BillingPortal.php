@@ -9,8 +9,8 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use Nvl\Billing\Contracts\BillingGateway;
 use Nvl\Billing\Contracts\BillingManagementAccess;
 use Nvl\Billing\Models\BillingAccount;
-use Nvl\Tenancy\Contracts\TenantDirectory;
-use Nvl\Tenancy\ValueObjects\TenantId;
+use Nvl\Support\Tenancy\Contracts\TenantDirectory;
+use Nvl\Support\Tenancy\ValueObjects\TenantId;
 
 /** Creates a portal entry for an authorized tenant billing administrator. */
 final readonly class BillingPortal

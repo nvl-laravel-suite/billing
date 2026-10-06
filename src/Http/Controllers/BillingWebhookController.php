@@ -34,7 +34,7 @@ final class BillingWebhookController
 
         return DB::connection($connection)->transaction(function () use ($payload, $connection): Response {
             $inserted = DB::connection($connection)
-                ->table(BillingTables::WebhookEvents)
+                ->table(BillingTables::get(BillingTables::WebhookEvents))
                 ->insertOrIgnore([
                     'stripe_event_id' => $payload['id'],
                     'type' => $payload['type'],

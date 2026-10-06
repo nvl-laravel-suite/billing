@@ -18,9 +18,9 @@ use Nvl\Billing\Models\BillingAccount;
 use Nvl\Billing\Models\BillingSubscription;
 use Nvl\Billing\ValueObjects\CheckoutAttempt;
 use Nvl\Billing\ValueObjects\CheckoutSession;
-use Nvl\Tenancy\Contracts\TenantDirectory;
-use Nvl\Tenancy\Enums\TenantStatus;
-use Nvl\Tenancy\ValueObjects\TenantId;
+use Nvl\Support\Tenancy\Contracts\TenantDirectory;
+use Nvl\Support\Tenancy\Enums\TenantStatus;
+use Nvl\Support\Tenancy\ValueObjects\TenantId;
 
 /** Starts one tenant's hosted subscription Checkout without duplicate sessions. */
 final readonly class StartCheckoutAction

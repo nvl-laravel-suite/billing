@@ -8,7 +8,7 @@ use DomainException;
 use Illuminate\Console\Command;
 use Nvl\Billing\Models\BillingAccount;
 use Nvl\Billing\Services\BillingReconciler;
-use Nvl\Tenancy\ValueObjects\TenantId;
+use Nvl\Support\Tenancy\ValueObjects\TenantId;
 
 /** Repairs local billing state from current Stripe subscriptions. */
 final class BillingReconcileCommand extends Command

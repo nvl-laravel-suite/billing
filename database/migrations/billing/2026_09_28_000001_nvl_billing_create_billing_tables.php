@@ -24,7 +24,7 @@ return new class extends Migration
     {
         $schema = $this->schema();
 
-        $schema->create(BillingTables::Accounts, function (Blueprint $table): void {
+        $schema->create(BillingTables::get(BillingTables::Accounts), function (Blueprint $table): void {
             $table->uuid('id')->primary();
             $table->uuid('tenant_id')->unique();
             $table->string('name')->nullable();
@@ -43,7 +43,7 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        $schema->create(BillingTables::Subscriptions, function (Blueprint $table): void {
+        $schema->create(BillingTables::get(BillingTables::Subscriptions), function (Blueprint $table): void {
             $table->uuid('id')->primary();
             $table->uuid('billing_account_id');
             $table->string('type');
@@ -56,10 +56,10 @@ return new class extends Migration
             $table->timestamps();
 
             $table->index(['billing_account_id', 'stripe_status'], 'nvl_billing_sub_account_status_idx');
-            $table->foreign('billing_account_id')->references('id')->on(BillingTables::Accounts)->cascadeOnDelete();
+            $table->foreign('billing_account_id')->references('id')->on(BillingTables::get(BillingTables::Accounts))->cascadeOnDelete();
         });
 
-        $schema->create(BillingTables::SubscriptionItems, function (Blueprint $table): void {
+        $schema->create(BillingTables::get(BillingTables::SubscriptionItems), function (Blueprint $table): void {
             $table->uuid('id')->primary();
             $table->uuid('billing_subscription_id');
             $table->string('stripe_id')->unique();
@@ -71,10 +71,10 @@ return new class extends Migration
             $table->timestamps();
 
             $table->index(['billing_subscription_id', 'stripe_price'], 'nvl_billing_item_subscription_price_idx');
-            $table->foreign('billing_subscription_id')->references('id')->on(BillingTables::Subscriptions)->cascadeOnDelete();
+            $table->foreign('billing_subscription_id')->references('id')->on(BillingTables::get(BillingTables::Subscriptions))->cascadeOnDelete();
         });
 
-        $schema->create(BillingTables::WebhookEvents, function (Blueprint $table): void {
+        $schema->create(BillingTables::get(BillingTables::WebhookEvents), function (Blueprint $table): void {
             $table->string('stripe_event_id')->primary();
             $table->string('type');
             $table->timestamp('processed_at');
@@ -85,10 +85,10 @@ return new class extends Migration
     public function down(): void
     {
         $schema = $this->schema();
-        $schema->dropIfExists(BillingTables::WebhookEvents);
-        $schema->dropIfExists(BillingTables::SubscriptionItems);
-        $schema->dropIfExists(BillingTables::Subscriptions);
-        $schema->dropIfExists(BillingTables::Accounts);
+        $schema->dropIfExists(BillingTables::get(BillingTables::WebhookEvents));
+        $schema->dropIfExists(BillingTables::get(BillingTables::SubscriptionItems));
+        $schema->dropIfExists(BillingTables::get(BillingTables::Subscriptions));
+        $schema->dropIfExists(BillingTables::get(BillingTables::Accounts));
     }
 
     /** Resolve the configured central schema builder. */

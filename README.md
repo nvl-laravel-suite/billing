@@ -95,3 +95,20 @@ From a standalone public Billing checkout, install dependencies and run `compose
 ## License
 
 MIT. See [LICENSE](LICENSE) and [SECURITY.md](SECURITY.md).
+
+## Shared consumer diagnostics
+
+Run `php artisan nvl:doctor --strict --format=json` to combine the read-only checks from loaded NVL package providers. Errors fail the gate, and strict mode also fails warnings. This package's existing Doctor command remains available and uses the same package-owned inspection service.
+
+## Next major: isolated schema identities
+
+Use `billing.tables.<logical-key>` for every table and `billing.connection` for its database connection. Null connection inherits `nvl-core.connection`, then Laravel's default. Tables are resolved at runtime by the package table definition helper.
+
+| Logical key | New default | Previous name |
+| --- | --- | --- |
+| `accounts` | `nvl_billing_accounts` | `nvl_billing_accounts` |
+| `subscriptions` | `nvl_billing_subscriptions` | `nvl_billing_subscriptions` |
+| `subscription_items` | `nvl_billing_subscription_items` | `nvl_billing_subscription_items` |
+| `webhook_events` | `nvl_billing_webhook_events` | `nvl_billing_webhook_events` |
+
+Migration filenames contain `nvl_billing_`. Existing installations must complete the upgrade in `UPGRADING.md` before running new migrations. A pending creator rejects an existing target before any migration in the batch runs; legacy storage with old history needs an ownership decision.

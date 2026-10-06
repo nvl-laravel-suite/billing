@@ -11,6 +11,7 @@ use Illuminate\Support\Carbon;
 use Laravel\Cashier\Billable;
 use Nvl\Billing\Definitions\Tables\BillingTables;
 use Nvl\Billing\Models\Concerns\UsesBillingConnection;
+use Nvl\Support\Config\PackageStorage;
 
 /**
  * Represents one tenant's Stripe customer without coupling billing to a user.
@@ -50,5 +51,17 @@ final class BillingAccount extends Model
             'pending_checkout_expires_at' => 'immutable_datetime',
             'pending_checkout_trial_days' => 'integer',
         ];
+    }
+
+    /** Resolve the configured package storage table. */
+    public function getTable(): string
+    {
+        return BillingTables::get(BillingTables::Accounts);
+    }
+
+    /** Resolve the package connection through shared infrastructure defaults. */
+    public function getConnectionName(): ?string
+    {
+        return PackageStorage::connectionName($this->connection ?? PackageStorage::connection('billing') ?? parent::getConnectionName());
     }
 }

@@ -9,6 +9,7 @@ use Illuminate\Support\Carbon;
 use Laravel\Cashier\Subscription;
 use Nvl\Billing\Definitions\Tables\BillingTables;
 use Nvl\Billing\Models\Concerns\UsesBillingConnection;
+use Nvl\Support\Config\PackageStorage;
 
 /**
  * Stores Cashier subscription state under Billing's own table name.
@@ -30,4 +31,16 @@ final class BillingSubscription extends Subscription
     public const string TABLE = BillingTables::Subscriptions;
 
     protected $table = self::TABLE;
+
+    /** Resolve the configured package storage table. */
+    public function getTable(): string
+    {
+        return BillingTables::get(BillingTables::Subscriptions);
+    }
+
+    /** Resolve the package connection through shared infrastructure defaults. */
+    public function getConnectionName(): ?string
+    {
+        return PackageStorage::connectionName($this->connection ?? PackageStorage::connection('billing') ?? parent::getConnectionName());
+    }
 }

@@ -8,7 +8,7 @@ use DomainException;
 use Illuminate\Support\Facades\DB;
 use Nvl\Billing\Contracts\SubscriptionReader;
 use Nvl\Billing\Models\BillingAccount;
-use Nvl\Tenancy\ValueObjects\TenantId;
+use Nvl\Support\Tenancy\ValueObjects\TenantId;
 
 /** Repairs a tenant's local Cashier state from Stripe's current objects. */
 final readonly class BillingReconciler

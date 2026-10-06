@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Laravel\Cashier\SubscriptionItem;
 use Nvl\Billing\Definitions\Tables\BillingTables;
 use Nvl\Billing\Models\Concerns\UsesBillingConnection;
+use Nvl\Support\Config\PackageStorage;
 
 /**
  * Stores Stripe Price ownership for a Billing subscription.
@@ -27,4 +28,16 @@ final class BillingSubscriptionItem extends SubscriptionItem
     public const string TABLE = BillingTables::SubscriptionItems;
 
     protected $table = self::TABLE;
+
+    /** Resolve the configured package storage table. */
+    public function getTable(): string
+    {
+        return BillingTables::get(BillingTables::SubscriptionItems);
+    }
+
+    /** Resolve the package connection through shared infrastructure defaults. */
+    public function getConnectionName(): ?string
+    {
+        return PackageStorage::connectionName($this->connection ?? PackageStorage::connection('billing') ?? parent::getConnectionName());
+    }
 }
