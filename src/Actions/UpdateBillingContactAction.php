@@ -9,6 +9,7 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use InvalidArgumentException;
 use Nvl\Billing\Contracts\BillingGateway;
 use Nvl\Billing\Contracts\BillingManagementAccess;
+use Nvl\Billing\Contracts\UpdateBillingContactContract;
 use Nvl\Billing\Models\BillingAccount;
 use Nvl\Support\Tenancy\Contracts\TenantDirectory;
 use Nvl\Support\Tenancy\Enums\TenantStatus;
@@ -19,7 +20,7 @@ use Nvl\Support\Tenancy\ValueObjects\TenantId;
  *
  * @api
  */
-final readonly class UpdateBillingContactAction
+final readonly class UpdateBillingContactAction implements UpdateBillingContactContract
 {
     /** Inject tenant, authorization, and Stripe boundaries. */
     public function __construct(

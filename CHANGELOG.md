@@ -4,6 +4,10 @@ All notable changes to `nvl/billing` are documented here.
 
 ## [Unreleased]
 
+### Added
+
+- Focused `StartCheckoutContract`, `UpdateBillingContactContract`, `BillingAccessContract`, and `BillingPortalContract` interfaces for host injection and orchestration testing, with conditional transient defaults preserving concrete constructors and native workflow results.
+
 ### Changed
 
 - Classify the supported consumer PHP surface with explicit source annotations and restrict package model handles to declared identity and in-memory read fields; preserve existing workflow behavior and concrete signatures.

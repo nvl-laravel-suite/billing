@@ -70,10 +70,59 @@ The optional trial is offered once per billing account. `trial.days=0` disables 
 
 Bind `Nvl\Billing\Contracts\BillingManagementAccess` in the host container to authorize the authenticated actor for the selected `TenantId`. The default binding denies management. Resolve the tenant from trusted host routing or session context, never from an untrusted checkout body. Call `UpdateBillingContactAction::execute($tenantId, $actor, $name, $email)` to maintain the tenant's explicit billing contact without changing an Auth profile; an existing Stripe customer is updated before the local record. Call `StartCheckoutAction::execute($tenantId, $actor, $email, $plan, $interval, $successUrl, $cancelUrl)` after authorization; it returns a hosted Checkout URL. Call `BillingPortal::url($tenantId, $actor, $returnUrl)` for subscription changes, payment methods, and cancellation through Stripe's customer portal. Validate allowed return URLs in the host before passing them. Do not unlock paid features from the Checkout success redirect; wait for a signed webhook or reconciliation.
 
-Read access through `BillingAccess::forTenant($tenantId)`:
+For host application services, inject the focused workflow contracts. `StartCheckoutContract::execute` returns `CheckoutSession`, `UpdateBillingContactContract::execute` returns a `BillingAccount` identity/result handle, `BillingAccessContract::forTenant` returns `BillingSnapshot`, and `BillingPortalContract::url` returns the hosted portal URL. Their arguments and results match the existing concrete APIs.
 
 ```php
-$snapshot = app(\Nvl\Billing\Services\BillingAccess::class)->forTenant($tenantId);
+use Illuminate\Contracts\Auth\Authenticatable;
+use Nvl\Billing\Contracts\BillingAccessContract;
+use Nvl\Billing\Contracts\BillingPortalContract;
+use Nvl\Billing\Contracts\StartCheckoutContract;
+use Nvl\Billing\Contracts\UpdateBillingContactContract;
+use Nvl\Billing\ValueObjects\CheckoutSession;
+use Nvl\Support\Tenancy\ValueObjects\TenantId;
+
+final readonly class TenantBilling
+{
+    public function __construct(
+        private StartCheckoutContract $checkout,
+        private UpdateBillingContactContract $contact,
+        private BillingAccessContract $access,
+        private BillingPortalContract $portal,
+    ) {}
+
+    public function start(
+        TenantId $tenant,
+        Authenticatable $actor,
+        string $name,
+        string $email,
+        string $plan,
+        string $interval,
+        string $successUrl,
+        string $cancelUrl,
+    ): CheckoutSession {
+        $this->contact->execute($tenant, $actor, $name, $email);
+
+        return $this->checkout->execute($tenant, $actor, $email, $plan, $interval, $successUrl, $cancelUrl);
+    }
+
+    public function reportsEnabled(TenantId $tenant): bool
+    {
+        return $this->access->forTenant($tenant)->allows('advanced_reports');
+    }
+
+    public function portalUrl(TenantId $tenant, Authenticatable $actor, string $returnUrl): string
+    {
+        return $this->portal->url($tenant, $actor, $returnUrl);
+    }
+}
+```
+
+The provider installs each default with transient `bindIf`, preserving a host instance or closure registered before discovery. A later `$app->instance(Contract::class, $substitute)` reaches services resolved afterward; previously constructed services retain their injected dependency. Tests may substitute these interfaces with a Mockery mock or their own implementation and return the declared native value/model handle. The concrete Actions and services remain available with their existing constructors. Keep `BillingGateway`, `SubscriptionReader`, and `BillingManagementAccess` as the Stripe, reconciliation, and authorization extension seams; authorization still denies by default.
+
+Read access through `BillingAccessContract::forTenant($tenantId)`:
+
+```php
+$snapshot = app(\Nvl\Billing\Contracts\BillingAccessContract::class)->forTenant($tenantId);
 
 if ($snapshot->allows('advanced_reports')) {
     // Show the host-owned report.

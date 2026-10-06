@@ -6,6 +6,7 @@ namespace Nvl\Billing\Services;
 
 use InvalidArgumentException;
 use Nvl\Billing\Catalog\PlanCatalog;
+use Nvl\Billing\Contracts\BillingAccessContract;
 use Nvl\Billing\Models\BillingAccount;
 use Nvl\Billing\Models\BillingSubscription;
 use Nvl\Billing\Models\BillingSubscriptionItem;
@@ -17,7 +18,7 @@ use Nvl\Support\Tenancy\ValueObjects\TenantId;
  *
  * @api
  */
-final readonly class BillingAccess
+final readonly class BillingAccess implements BillingAccessContract
 {
     /** Create the read-only access resolver with the configured Price catalog. */
     public function __construct(private PlanCatalog $catalog) {}

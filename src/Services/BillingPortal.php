@@ -8,6 +8,7 @@ use DomainException;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Nvl\Billing\Contracts\BillingGateway;
 use Nvl\Billing\Contracts\BillingManagementAccess;
+use Nvl\Billing\Contracts\BillingPortalContract;
 use Nvl\Billing\Models\BillingAccount;
 use Nvl\Support\Tenancy\Contracts\TenantDirectory;
 use Nvl\Support\Tenancy\ValueObjects\TenantId;
@@ -17,7 +18,7 @@ use Nvl\Support\Tenancy\ValueObjects\TenantId;
  *
  * @api
  */
-final readonly class BillingPortal
+final readonly class BillingPortal implements BillingPortalContract
 {
     /** Inject permission, tenant, and Stripe boundaries. */
     public function __construct(

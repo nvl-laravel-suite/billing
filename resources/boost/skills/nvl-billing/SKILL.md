@@ -11,9 +11,15 @@ Use this skill when integrating or changing tenant subscription billing in an ap
 
 - Use a trusted `TenantId` and bind `BillingManagementAccess` for every management action. The default rejects access. Keep customer and subscription IDs out of client-controlled tenant selection.
 - Resolve plan and interval through the configured Price catalog. Never let a request choose an arbitrary Stripe Price ID.
-- Use `StartCheckoutAction` for hosted subscription Checkout and `BillingPortal` for self-service changes. Unlock features only from `BillingAccess` after signed webhook synchronization or reconciliation.
-- Use `UpdateBillingContactAction` for an explicit tenant billing name and email; changes to a user's Auth profile do not update the Stripe customer.
+- Inject `StartCheckoutContract` for hosted subscription Checkout and `BillingPortalContract` for self-service changes. Unlock features only from `BillingAccessContract` after signed webhook synchronization or reconciliation.
+- Inject `UpdateBillingContactContract` for an explicit tenant billing name and email; changes to a user's Auth profile do not update the Stripe customer.
 - Keep payment keys and webhook secrets in host environment configuration. Verify webhook signatures; preserve event deduplication and Stripe idempotency keys.
+
+## Host composition and tests
+
+- Receive the four interfaces from `Nvl\Billing\Contracts` through constructor injection. Preserve native methods: `StartCheckoutContract::execute(TenantId, Authenticatable, string, string, string, string, string): CheckoutSession`, `UpdateBillingContactContract::execute(TenantId, Authenticatable, string, string): BillingAccount`, `BillingAccessContract::forTenant(TenantId): BillingSnapshot`, and `BillingPortalContract::url(TenantId, Authenticatable, string): string`.
+- The provider uses transient `bindIf` defaults. Host instances and closures bound before discovery remain installed; late interface replacement reaches newly constructed host services. Keep existing concrete constructors available and retain `BillingGateway`, `SubscriptionReader`, and `BillingManagementAccess` for their existing extension roles.
+- Substitute interfaces in host orchestration tests and return actual `CheckoutSession`, `BillingSnapshot`, or native unsaved `BillingAccount` handles. Do not execute owning database/Stripe workflows to construct substitute results. Measure effects after fixtures and provider setup; host isolation is separate from native authorization and lifecycle tests. This addition ships no runtime gateway fake or factory.
 
 ## Trials and access
 

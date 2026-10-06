@@ -29,3 +29,9 @@ DDL transactions are driver dependent and per connection. Inspect dry-run warnin
 ## Tagged consumer PHP boundary
 
 Use source `@api` workflows, extension contracts, and value types for application integration. Direct use of untagged implementations or `@internal` members is unsupported. This classification keeps existing concrete Action signatures and runtime behavior; it does not authorize package model persistence, ad hoc queries, relation traversal, or generic model serialization. Returned models are identity/result handles with only the explicitly declared in-memory read fields described in the README.
+
+## Focused workflow injection
+
+Host services can now replace constructor dependencies on `StartCheckoutAction`, `UpdateBillingContactAction`, `BillingAccess`, and `BillingPortal` with `StartCheckoutContract`, `UpdateBillingContactContract`, `BillingAccessContract`, and `BillingPortalContract` respectively. The interfaces preserve each existing public method's arguments, result, and documentation. No database migration or Cashier adoption change accompanies this addition; concrete construction remains supported.
+
+Each new default is transient and registered with `bindIf`. Bind a host implementation, closure, or instance before provider discovery, or replace the interface instance before resolving a new host service. Existing constructed services keep their injected dependency. The gateway, subscription-reader, and management-authorization extension contracts retain their conditional defaults. Interface substitutes isolate host orchestration; they do not establish native authorization, storage, or Stripe lifecycle correctness.

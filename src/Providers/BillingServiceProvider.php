@@ -7,16 +7,24 @@ namespace Nvl\Billing\Providers;
 use Illuminate\Support\ServiceProvider;
 use InvalidArgumentException;
 use Laravel\Cashier\Cashier;
+use Nvl\Billing\Actions\StartCheckoutAction;
+use Nvl\Billing\Actions\UpdateBillingContactAction;
 use Nvl\Billing\Catalog\PlanCatalog;
 use Nvl\Billing\Console\Commands\BillingDoctorCommand;
 use Nvl\Billing\Console\Commands\BillingReconcileCommand;
+use Nvl\Billing\Contracts\BillingAccessContract;
 use Nvl\Billing\Contracts\BillingGateway;
 use Nvl\Billing\Contracts\BillingManagementAccess;
+use Nvl\Billing\Contracts\BillingPortalContract;
+use Nvl\Billing\Contracts\StartCheckoutContract;
 use Nvl\Billing\Contracts\SubscriptionReader;
+use Nvl\Billing\Contracts\UpdateBillingContactContract;
 use Nvl\Billing\Models\BillingAccount;
 use Nvl\Billing\Models\BillingSubscription;
 use Nvl\Billing\Models\BillingSubscriptionItem;
+use Nvl\Billing\Services\BillingAccess;
 use Nvl\Billing\Services\BillingDoctor;
+use Nvl\Billing\Services\BillingPortal;
 use Nvl\Billing\Services\DenyBillingManagementAccess;
 use Nvl\Billing\Services\StripeBillingGateway;
 use Nvl\Billing\Services\StripeSubscriptionReader;
@@ -52,6 +60,10 @@ final class BillingServiceProvider extends ServiceProvider
         $this->app->bindIf(BillingManagementAccess::class, DenyBillingManagementAccess::class);
         $this->app->bindIf(BillingGateway::class, StripeBillingGateway::class);
         $this->app->bindIf(SubscriptionReader::class, StripeSubscriptionReader::class);
+        $this->app->bindIf(StartCheckoutContract::class, StartCheckoutAction::class);
+        $this->app->bindIf(UpdateBillingContactContract::class, UpdateBillingContactAction::class);
+        $this->app->bindIf(BillingAccessContract::class, BillingAccess::class);
+        $this->app->bindIf(BillingPortalContract::class, BillingPortal::class);
     }
 
     /** Publish the configuration and load only explicitly enabled migrations. */

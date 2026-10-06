@@ -14,6 +14,7 @@ use InvalidArgumentException;
 use Nvl\Billing\Catalog\PlanCatalog;
 use Nvl\Billing\Contracts\BillingGateway;
 use Nvl\Billing\Contracts\BillingManagementAccess;
+use Nvl\Billing\Contracts\StartCheckoutContract;
 use Nvl\Billing\Models\BillingAccount;
 use Nvl\Billing\Models\BillingSubscription;
 use Nvl\Billing\ValueObjects\CheckoutAttempt;
@@ -27,7 +28,7 @@ use Nvl\Support\Tenancy\ValueObjects\TenantId;
  *
  * @api
  */
-final readonly class StartCheckoutAction
+final readonly class StartCheckoutAction implements StartCheckoutContract
 {
     /** Inject the tenant, permission, catalog, and Stripe boundaries. */
     public function __construct(

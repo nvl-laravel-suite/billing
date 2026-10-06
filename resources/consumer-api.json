@@ -25,6 +25,15 @@
             "properties": [],
             "constants": []
         },
+        "Nvl\\Billing\\Contracts\\BillingAccessContract": {
+            "kind": "interface",
+            "file": "src/Contracts/BillingAccessContract.php",
+            "methods": [
+                "forTenant"
+            ],
+            "properties": [],
+            "constants": []
+        },
         "Nvl\\Billing\\Contracts\\BillingGateway": {
             "kind": "interface",
             "file": "src/Contracts/BillingGateway.php",
@@ -45,11 +54,38 @@
             "properties": [],
             "constants": []
         },
+        "Nvl\\Billing\\Contracts\\BillingPortalContract": {
+            "kind": "interface",
+            "file": "src/Contracts/BillingPortalContract.php",
+            "methods": [
+                "url"
+            ],
+            "properties": [],
+            "constants": []
+        },
+        "Nvl\\Billing\\Contracts\\StartCheckoutContract": {
+            "kind": "interface",
+            "file": "src/Contracts/StartCheckoutContract.php",
+            "methods": [
+                "execute"
+            ],
+            "properties": [],
+            "constants": []
+        },
         "Nvl\\Billing\\Contracts\\SubscriptionReader": {
             "kind": "interface",
             "file": "src/Contracts/SubscriptionReader.php",
             "methods": [
                 "forCustomer"
+            ],
+            "properties": [],
+            "constants": []
+        },
+        "Nvl\\Billing\\Contracts\\UpdateBillingContactContract": {
+            "kind": "interface",
+            "file": "src/Contracts/UpdateBillingContactContract.php",
+            "methods": [
+                "execute"
             ],
             "properties": [],
             "constants": []
