@@ -1,0 +1,144 @@
+{
+    "schema_version": 1,
+    "package": "nvl/billing",
+    "psr4": {
+        "Nvl\\Billing\\": "src"
+    },
+    "symbols": {
+        "Nvl\\Billing\\Actions\\StartCheckoutAction": {
+            "kind": "class",
+            "file": "src/Actions/StartCheckoutAction.php",
+            "methods": [
+                "__construct",
+                "execute"
+            ],
+            "properties": [],
+            "constants": []
+        },
+        "Nvl\\Billing\\Actions\\UpdateBillingContactAction": {
+            "kind": "class",
+            "file": "src/Actions/UpdateBillingContactAction.php",
+            "methods": [
+                "__construct",
+                "execute"
+            ],
+            "properties": [],
+            "constants": []
+        },
+        "Nvl\\Billing\\Contracts\\BillingGateway": {
+            "kind": "interface",
+            "file": "src/Contracts/BillingGateway.php",
+            "methods": [
+                "checkout",
+                "portal",
+                "updateCustomer"
+            ],
+            "properties": [],
+            "constants": []
+        },
+        "Nvl\\Billing\\Contracts\\BillingManagementAccess": {
+            "kind": "interface",
+            "file": "src/Contracts/BillingManagementAccess.php",
+            "methods": [
+                "assertCanManage"
+            ],
+            "properties": [],
+            "constants": []
+        },
+        "Nvl\\Billing\\Contracts\\SubscriptionReader": {
+            "kind": "interface",
+            "file": "src/Contracts/SubscriptionReader.php",
+            "methods": [
+                "forCustomer"
+            ],
+            "properties": [],
+            "constants": []
+        },
+        "Nvl\\Billing\\Models\\BillingAccount": {
+            "kind": "class",
+            "file": "src/Models/BillingAccount.php",
+            "methods": [
+                "getKey",
+                "getKeyName",
+                "getMorphClass",
+                "getRouteKey",
+                "getRouteKeyName",
+                "is",
+                "isNot",
+                "relationLoaded"
+            ],
+            "properties": [],
+            "constants": []
+        },
+        "Nvl\\Billing\\Services\\BillingAccess": {
+            "kind": "class",
+            "file": "src/Services/BillingAccess.php",
+            "methods": [
+                "__construct",
+                "forTenant"
+            ],
+            "properties": [],
+            "constants": []
+        },
+        "Nvl\\Billing\\Services\\BillingPortal": {
+            "kind": "class",
+            "file": "src/Services/BillingPortal.php",
+            "methods": [
+                "__construct",
+                "url"
+            ],
+            "properties": [],
+            "constants": []
+        },
+        "Nvl\\Billing\\ValueObjects\\BillingSnapshot": {
+            "kind": "class",
+            "file": "src/ValueObjects/BillingSnapshot.php",
+            "methods": [
+                "__construct",
+                "allows",
+                "limit"
+            ],
+            "properties": [
+                "plan",
+                "state"
+            ],
+            "constants": []
+        },
+        "Nvl\\Billing\\ValueObjects\\CheckoutSession": {
+            "kind": "class",
+            "file": "src/ValueObjects/CheckoutSession.php",
+            "methods": [
+                "__construct"
+            ],
+            "properties": [
+                "expiresAt",
+                "id",
+                "url"
+            ],
+            "constants": []
+        }
+    },
+    "models": {
+        "Nvl\\Billing\\Models\\BillingAccount": {
+            "read": [],
+            "identity_methods": [
+                "getKey",
+                "getKeyName",
+                "getMorphClass",
+                "getRouteKey",
+                "getRouteKeyName",
+                "is",
+                "isNot",
+                "relationLoaded"
+            ],
+            "capability_relations": []
+        }
+    },
+    "capability_relations": {},
+    "tables": {
+        "accounts": "nvl_billing_accounts",
+        "subscription_items": "nvl_billing_subscription_items",
+        "subscriptions": "nvl_billing_subscriptions",
+        "webhook_events": "nvl_billing_webhook_events"
+    }
+}
