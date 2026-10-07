@@ -39,6 +39,7 @@ final class BillingAccount extends Model
 
     /** @use HasFactory<BillingAccountFactory> */
     use HasFactory;
+
     use HasUuids;
     use UsesBillingConnection;
 
