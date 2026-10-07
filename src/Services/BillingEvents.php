@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Nvl\Billing\Services;
 
+use Illuminate\Container\Container;
 use Nvl\Billing\Events\BillingAccountChanged;
 use Nvl\Billing\Events\BillingCheckoutStarted;
 use Nvl\Billing\Events\BillingSubscriptionChanged;
@@ -16,6 +17,15 @@ final readonly class BillingEvents
 {
     /** Retain the native source-aware dispatcher. */
     public function __construct(private DomainEventDispatcher $events) {}
+
+    /** Preserve manual Action construction through the current host event boundary.
+     *
+     * @internal
+     */
+    public static function current(): self
+    {
+        return Container::getInstance()->make(self::class);
+    }
 
     /** Publish one persisted account transition while Billing is enabled. */
     public function accountChanged(BillingAccount $account, string $operation): void
