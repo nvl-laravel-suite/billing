@@ -47,7 +47,7 @@ Global Cashier adoption is opt-in: `nvl-billing.adoption.cashier_models` replace
 
 ## Requirements and installation
 
-Use PHP 8.4+, Laravel 13, Stripe, and an active Tenancy tenant directory. Install the published package from Packagist, then configure it in the host application:
+Use PHP 8.4+, Laravel 12–13, Stripe, and an active Tenancy tenant directory. Install the published package from Packagist, then configure it in the host application:
 
 ```bash
 composer require nvl/billing:^5.0
