@@ -29,7 +29,7 @@ final readonly class UpdateBillingContactAction implements UpdateBillingContactC
         private TenantDirectory $tenants,
         private BillingManagementAccess $management,
         private BillingGateway $gateway,
-        private BillingEvents $events,
+        private ?BillingEvents $events = null,
     ) {}
 
     /** Change the contact only after the host authorizes this tenant. */
@@ -54,7 +54,7 @@ final readonly class UpdateBillingContactAction implements UpdateBillingContactC
         if ($account === null) {
             return (new BillingAccount)->getConnection()->transaction(function () use ($tenant, $name, $email): BillingAccount {
                 $created = BillingAccount::query()->create(['tenant_id' => $tenant->value, 'name' => $name, 'email' => $email]);
-                $this->events->accountChanged($created, 'created');
+                ($this->events ?? app(BillingEvents::class))->accountChanged($created, 'created');
 
                 return $created;
             });
@@ -70,7 +70,7 @@ final readonly class UpdateBillingContactAction implements UpdateBillingContactC
             $changed = $account->isDirty(['name', 'email']);
             $account->save();
             if ($changed) {
-                $this->events->accountChanged($account, 'contact_updated');
+                ($this->events ?? app(BillingEvents::class))->accountChanged($account, 'contact_updated');
             }
         });
 

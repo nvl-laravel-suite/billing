@@ -99,8 +99,9 @@ it('retains the original concrete constructors and private promoted dependencies
     foreach ($expected as $implementation => $parameters) {
         $concrete = new ReflectionClass($implementation);
         $constructor = $concrete->getConstructor() ?? throw new LogicException('A concrete constructor is required.');
-        expect(count($constructor->getParameters()))->toBe(count($parameters));
-        foreach ($constructor->getParameters() as $position => $parameter) {
+        expect($constructor->getNumberOfRequiredParameters())->toBe(count($parameters));
+        expect($concrete->newInstanceArgs(array_map(static fn (array $parameter): object => app($parameter[1]), $parameters)))->toBeInstanceOf($implementation);
+        foreach (array_slice($constructor->getParameters(), 0, count($parameters)) as $position => $parameter) {
             $property = $concrete->getProperty($parameter->getName());
             expect([$parameter->getName(), (string) $parameter->getType()])->toBe($parameters[$position])
                 ->and($parameter->isPromoted())->toBeTrue()

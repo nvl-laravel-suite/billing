@@ -39,7 +39,7 @@ final readonly class StartCheckoutAction implements StartCheckoutContract
         private BillingManagementAccess $management,
         private PlanCatalog $catalog,
         private BillingGateway $gateway,
-        private BillingEvents $events,
+        private ?BillingEvents $events = null,
     ) {}
 
     /**
@@ -99,7 +99,7 @@ final readonly class StartCheckoutAction implements StartCheckoutContract
                     'pending_checkout_url' => $session->url,
                 ]);
             if ($updated === 1) {
-                $this->events->checkoutStarted($account, $attempt->id, $session->id);
+                ($this->events ?? app(BillingEvents::class))->checkoutStarted($account, $attempt->id, $session->id);
             }
         });
 
@@ -113,7 +113,7 @@ final readonly class StartCheckoutAction implements StartCheckoutContract
             return (new BillingAccount)->getConnection()->transaction(function () use ($tenant, $email): BillingAccount {
                 $account = BillingAccount::query()->firstOrCreate(['tenant_id' => $tenant->value], ['email' => $email]);
                 if ($account->wasRecentlyCreated) {
-                    $this->events->accountChanged($account, 'created');
+                    ($this->events ?? app(BillingEvents::class))->accountChanged($account, 'created');
                 }
 
                 return $account;
