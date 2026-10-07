@@ -154,7 +154,7 @@ it('blocks duplicate subscriptions and conflicting pending checkouts', function 
 
     $subscription->delete();
     $account->forceFill([
-        'pending_checkout_attempt_id' => 'attempt-other',
+        'pending_checkout_attempt_id' => 'ffffffff-ffff-4fff-8fff-ffffffffffff',
         'pending_checkout_price' => 'price_pro_year',
         'pending_checkout_expires_at' => now()->addHour(),
     ])->save();
