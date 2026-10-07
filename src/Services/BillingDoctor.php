@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Schema;
 use Laravel\Cashier\Cashier;
 use Nvl\Billing\Catalog\PlanCatalog;
 use Nvl\Billing\Definitions\Tables\BillingTables;
+use Nvl\Billing\Exceptions\BillingException;
 use Nvl\Billing\Models\BillingAccount;
 use Nvl\Support\Doctor\DoctorCheck;
 
@@ -48,7 +49,7 @@ final class BillingDoctor
         try {
             PlanCatalog::fromConfig(config('nvl-billing.prices', []));
             $checks['price_catalog'] = config('nvl-billing.prices') !== [];
-        } catch (\InvalidArgumentException|\TypeError) {
+        } catch (BillingException|\InvalidArgumentException|\TypeError) {
             $checks['price_catalog'] = false;
         }
 

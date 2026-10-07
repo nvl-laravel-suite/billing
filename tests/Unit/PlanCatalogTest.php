@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Nvl\Billing\Catalog\PlanCatalog;
+use Nvl\Billing\Exceptions\BillingException;
 
 it('resolves only configured plan prices in both directions', function (): void {
     $catalog = new PlanCatalog([
@@ -18,7 +19,7 @@ it('resolves only configured plan prices in both directions', function (): void 
 it('rejects unknown plan variants and duplicate price ownership', function (): void {
     $catalog = new PlanCatalog(['starter' => ['monthly' => 'price_starter_month']]);
 
-    expect(fn () => $catalog->priceFor('starter', 'yearly'))->toThrow(InvalidArgumentException::class)
+    expect(fn () => $catalog->priceFor('starter', 'yearly'))->toThrow(BillingException::class)
         ->and(fn () => new PlanCatalog([
             'starter' => ['monthly' => 'price_shared'],
             'pro' => ['monthly' => 'price_shared'],
