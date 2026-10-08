@@ -27,8 +27,14 @@ final class BillingWebhookController
     /** Apply one signed Stripe event through Cashier and record its side effects. */
     public function handleWebhook(Request $request): Response
     {
-        $payload = json_decode($request->getContent(), true, 512, JSON_THROW_ON_ERROR);
-        if (! is_array($payload) || ! is_string($payload['id'] ?? null) || ! is_string($payload['type'] ?? null)) {
+        $payload = json_decode($request->getContent(), true);
+        if (! is_array($payload)
+            || ! is_string($payload['id'] ?? null)
+            || ! str_starts_with($payload['id'], 'evt_') || strlen($payload['id']) > 255
+            || ! is_string($payload['type'] ?? null) || $payload['type'] === '' || strlen($payload['type']) > 255
+            || ! is_array($payload['data'] ?? null) || ! is_array($payload['data']['object'] ?? null)
+            || ! is_string($payload['data']['object']['id'] ?? null)
+            || $payload['data']['object']['id'] === '' || strlen($payload['data']['object']['id']) > 255) {
             return response()->json(['message' => 'Invalid Stripe event.'], 400);
         }
         $connection = PackageStorage::connection('billing');

@@ -72,6 +72,26 @@ it('requires a signed webhook and applies each Stripe event once', function (): 
         ->and(DB::table(BillingTables::WebhookEvents)->count())->toBe(1);
 });
 
+it('rejects malformed signed billing envelopes before recording or applying them', function (string $payload): void {
+    $timestamp = time();
+    $signature = hash_hmac('sha256', "{$timestamp}.{$payload}", 'whsec_billing_test');
+
+    $this->call('POST', '/nvl/billing/stripe/webhook', [], [], [], [
+        'CONTENT_TYPE' => 'application/json',
+        'HTTP_Stripe_Signature' => "t={$timestamp},v1={$signature}",
+    ], $payload)->assertBadRequest();
+
+    expect(DB::table(BillingTables::WebhookEvents)->count())->toBe(0);
+})->with([
+    '{',
+    'null',
+    '{"id":"","type":"customer.updated","data":{"object":{"id":"cus_test"}}}',
+    '{"id":"not_an_event","type":"customer.updated","data":{"object":{"id":"cus_test"}}}',
+    '{"id":"evt_bad","type":"customer.updated","data":{"object":null}}',
+    '{"id":"evt_bad","type":"customer.updated","data":{"object":{"id":[]}}}',
+    '{"id":"evt_bad","type":"","data":{"object":{"id":"cus_test"}}}',
+]);
+
 it('records a completed trial from a later active subscription event', function (): void {
     $account = BillingAccount::query()->forceCreate([
         'tenant_id' => '1bc8245c-81fe-4ffb-b90a-99088939ed5e',
