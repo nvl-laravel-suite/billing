@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 use Nvl\Billing\Actions\StartCheckoutAction;
 use Nvl\Billing\Contracts\BillingManagementAccess;
 use Nvl\Billing\Definitions\Tables\BillingTables;

@@ -18,7 +18,11 @@ use Nvl\Billing\Compatibility\Services\BillingPortal;
 use Nvl\Billing\Compatibility\Services\DenyBillingManagementAccess;
 use Nvl\Billing\Providers\BillingServiceProvider;
 
-/** Registers the explicit pre-adoption tenancy API for upgrading consumers. @api */
+/**
+ * Registers the explicit pre-adoption tenancy API for upgrading consumers.
+ *
+ * @api
+ */
 final class LegacyBillingServiceProvider extends ServiceProvider
 {
     /** Keep old contracts behind an explicit provider instead of changing native signatures. */

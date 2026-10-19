@@ -26,11 +26,115 @@
             "properties": [],
             "constants": []
         },
+        "Nvl\\Billing\\Compatibility\\Actions\\StartCheckoutAction": {
+            "kind": "class",
+            "file": "src/Compatibility/Actions/StartCheckoutAction.php",
+            "methods": [
+                "__construct",
+                "execute"
+            ],
+            "properties": [],
+            "constants": []
+        },
+        "Nvl\\Billing\\Compatibility\\Actions\\UpdateBillingContactAction": {
+            "kind": "class",
+            "file": "src/Compatibility/Actions/UpdateBillingContactAction.php",
+            "methods": [
+                "__construct",
+                "execute"
+            ],
+            "properties": [],
+            "constants": []
+        },
+        "Nvl\\Billing\\Compatibility\\Contracts\\BillingAccessContract": {
+            "kind": "interface",
+            "file": "src/Compatibility/Contracts/BillingAccessContract.php",
+            "methods": [
+                "forTenant"
+            ],
+            "properties": [],
+            "constants": []
+        },
+        "Nvl\\Billing\\Compatibility\\Contracts\\BillingManagementAccess": {
+            "kind": "interface",
+            "file": "src/Compatibility/Contracts/BillingManagementAccess.php",
+            "methods": [
+                "assertCanManage"
+            ],
+            "properties": [],
+            "constants": []
+        },
+        "Nvl\\Billing\\Compatibility\\Contracts\\BillingPortalContract": {
+            "kind": "interface",
+            "file": "src/Compatibility/Contracts/BillingPortalContract.php",
+            "methods": [
+                "url"
+            ],
+            "properties": [],
+            "constants": []
+        },
+        "Nvl\\Billing\\Compatibility\\Contracts\\StartCheckoutContract": {
+            "kind": "interface",
+            "file": "src/Compatibility/Contracts/StartCheckoutContract.php",
+            "methods": [
+                "execute"
+            ],
+            "properties": [],
+            "constants": []
+        },
+        "Nvl\\Billing\\Compatibility\\Contracts\\UpdateBillingContactContract": {
+            "kind": "interface",
+            "file": "src/Compatibility/Contracts/UpdateBillingContactContract.php",
+            "methods": [
+                "execute"
+            ],
+            "properties": [],
+            "constants": []
+        },
+        "Nvl\\Billing\\Compatibility\\Factories\\LegacyBillingAccountFactory": {
+            "kind": "trait",
+            "file": "src/Compatibility/Factories/LegacyBillingAccountFactory.php",
+            "methods": [
+                "forTenant"
+            ],
+            "properties": [],
+            "constants": []
+        },
+        "Nvl\\Billing\\Compatibility\\LegacyBillingServiceProvider": {
+            "kind": "class",
+            "file": "src/Compatibility/LegacyBillingServiceProvider.php",
+            "methods": [
+                "boot",
+                "register"
+            ],
+            "properties": [],
+            "constants": []
+        },
+        "Nvl\\Billing\\Compatibility\\Services\\BillingAccess": {
+            "kind": "class",
+            "file": "src/Compatibility/Services/BillingAccess.php",
+            "methods": [
+                "__construct",
+                "forTenant"
+            ],
+            "properties": [],
+            "constants": []
+        },
+        "Nvl\\Billing\\Compatibility\\Services\\BillingPortal": {
+            "kind": "class",
+            "file": "src/Compatibility/Services/BillingPortal.php",
+            "methods": [
+                "__construct",
+                "url"
+            ],
+            "properties": [],
+            "constants": []
+        },
         "Nvl\\Billing\\Contracts\\BillingAccessContract": {
             "kind": "interface",
             "file": "src/Contracts/BillingAccessContract.php",
             "methods": [
-                "forTenant"
+                "forOwner"
             ],
             "properties": [],
             "constants": []
@@ -95,6 +199,7 @@
             "kind": "class",
             "file": "database/factories/BillingAccountFactory.php",
             "methods": [
+                "configure",
                 "definition",
                 "forTenant"
             ],
@@ -140,6 +245,7 @@
                 "InvalidConfiguration",
                 "OperationConflict",
                 "OperationFailed",
+                "OwnerInactive",
                 "PaymentStateInvalid",
                 "ProviderIdentityMismatch",
                 "ProviderPayloadInvalid",
@@ -271,7 +377,7 @@
             "file": "src/Services/BillingAccess.php",
             "methods": [
                 "__construct",
-                "forTenant"
+                "forOwner"
             ],
             "properties": [],
             "constants": []
