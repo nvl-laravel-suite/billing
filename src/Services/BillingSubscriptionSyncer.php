@@ -15,7 +15,7 @@ use Nvl\Billing\Models\BillingSubscriptionItem;
 final class BillingSubscriptionSyncer
 {
     /** Retain the shared Billing fact publisher. */
-    public function __construct(private readonly BillingEvents $events) {}
+    public function __construct(private readonly BillingEvents $events, private readonly BillingRecordWriter $writer) {}
 
     /**
      * Synchronize one Stripe subscription without calling Stripe in a DB transaction.
@@ -62,7 +62,7 @@ final class BillingSubscriptionSyncer
                 'ends_at' => $this->endsAt($subscription, $itemValues, $record->ends_at === null ? null : CarbonImmutable::instance($record->ends_at)),
             ]);
             $changed = $created || $record->isDirty();
-            $record->save();
+            $this->writer->subscription($record);
 
             $itemIds = [];
             foreach ($itemValues as $item) {
@@ -81,7 +81,7 @@ final class BillingSubscriptionSyncer
                     'quantity' => $item['quantity'],
                 ]);
                 $changed = $changed || ! $existing->exists || $existing->isDirty();
-                $existing->save();
+                $this->writer->item($existing);
             }
 
             $deleted = BillingSubscriptionItem::query()->where('billing_subscription_id', $record->id)

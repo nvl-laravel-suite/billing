@@ -60,13 +60,16 @@ final readonly class BillingCustomerSyncer
 
         $account->getConnection()->transaction(function () use ($account): void {
             $account->setRawAttributes($account->newQuery()->whereKey($account->getKey())->lockForUpdate()->firstOrFail()->getAttributes(), true);
-            if ($account->stripe_id === null) {
+            if ($account->stripe_id === null || $account->provider_deleted_at !== null) {
                 return;
             }
             foreach (BillingSubscription::query()->where('billing_account_id', $account->id)->get() as $subscription) {
                 $this->subscriptions->cancel($subscription, $account);
             }
-            $account->forceFill(['stripe_id' => null, 'pm_type' => null, 'pm_last_four' => null])->save();
+            $native = $account->getRawOriginal('owner_scope_key') !== null;
+            $account->forceFill($native
+                ? ['provider_deleted_at' => now(), 'pm_type' => null, 'pm_last_four' => null]
+                : ['stripe_id' => null, 'pm_type' => null, 'pm_last_four' => null])->save();
             $this->events->accountChanged($account, 'customer_deleted');
         });
     }

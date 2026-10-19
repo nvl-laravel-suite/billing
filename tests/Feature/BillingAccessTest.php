@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
+use Nvl\Billing\Compatibility\Services\BillingAccess;
 use Nvl\Billing\Models\BillingAccount;
-use Nvl\Billing\Services\BillingAccess;
 use Nvl\Tenancy\ValueObjects\TenantId;
 
 it('grants only the purchased plan to its owning tenant', function (): void {

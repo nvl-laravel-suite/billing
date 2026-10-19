@@ -12,7 +12,7 @@ use Nvl\Billing\Models\BillingAccount;
 use Nvl\Billing\Models\BillingSubscription;
 use Nvl\Billing\Models\BillingSubscriptionItem;
 use Nvl\Billing\ValueObjects\BillingSnapshot;
-use Nvl\Support\Tenancy\ValueObjects\TenantId;
+use Nvl\Support\Ownership\ValueObjects\OwnerReference;
 
 /**
  * Resolves tenant features and limits from Cashier's synchronized state.
@@ -22,17 +22,18 @@ use Nvl\Support\Tenancy\ValueObjects\TenantId;
 final readonly class BillingAccess implements BillingAccessContract
 {
     /** Create the read-only access resolver with the configured Price catalog. */
-    public function __construct(private PlanCatalog $catalog) {}
+    public function __construct(private PlanCatalog $catalog, private BillingOwnerBoundary $ownership) {}
 
-    /** Return one tenant's effective access without using ambient tenant context. */
-    public function forTenant(TenantId $tenant): BillingSnapshot
+    /** Return one owner's effective access without using ambient tenant context. */
+    public function forOwner(OwnerReference $owner): BillingSnapshot
     {
         if (config('nvl-billing.enabled') !== true) {
             return $this->snapshot(null, 'disabled');
         }
 
-        $account = BillingAccount::query()->where('tenant_id', $tenant->value)->first();
-        if ($account === null) {
+        $this->ownership->assertOwner($owner);
+        $account = BillingAccount::query()->where('owner_scope_key', $owner->scopeKey())->first();
+        if ($account === null || $account->provider_deleted_at !== null) {
             return $this->snapshot(null, 'free');
         }
 

@@ -6,10 +6,11 @@ namespace Nvl\Billing\Tests\Fixtures;
 
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Foundation\Application;
-use Nvl\Billing\Contracts\BillingAccessContract;
-use Nvl\Billing\Contracts\BillingPortalContract;
-use Nvl\Billing\Contracts\StartCheckoutContract;
-use Nvl\Billing\Contracts\UpdateBillingContactContract;
+use InvalidArgumentException;
+use Nvl\Billing\Compatibility\Contracts\BillingAccessContract;
+use Nvl\Billing\Compatibility\Contracts\BillingPortalContract;
+use Nvl\Billing\Compatibility\Contracts\StartCheckoutContract;
+use Nvl\Billing\Compatibility\Contracts\UpdateBillingContactContract;
 use Nvl\Billing\Models\BillingAccount;
 use Nvl\Billing\ValueObjects\BillingSnapshot;
 use Nvl\Billing\ValueObjects\CheckoutSession;

@@ -14,6 +14,7 @@ enum BillingResponseCode: string implements ResponseCode
     case BindingRequired = 'binding_required';
     case OperationFailed = 'operation_failed';
     case FeatureDisabled = 'feature_disabled';
+    case OwnerInactive = 'owner_inactive';
     case TenantInactive = 'tenant_inactive';
     case CheckoutConflict = 'checkout_conflict';
     case SubscriptionConflict = 'subscription_conflict';

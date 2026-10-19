@@ -6,10 +6,10 @@ use Illuminate\Foundation\Auth\User;
 use Laravel\Cashier\Cashier;
 use Laravel\Cashier\Subscription;
 use Laravel\Cashier\SubscriptionItem;
+use Nvl\Billing\Compatibility\LegacyBillingServiceProvider as BillingServiceProvider;
 use Nvl\Billing\Models\BillingAccount;
 use Nvl\Billing\Models\BillingSubscription;
 use Nvl\Billing\Models\BillingSubscriptionItem;
-use Nvl\Billing\Providers\BillingServiceProvider;
 use Orchestra\Testbench\TestCase;
 
 uses(TestCase::class);

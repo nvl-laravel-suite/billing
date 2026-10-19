@@ -23,22 +23,27 @@ use Nvl\Billing\Exceptions\BillingException;
 use Nvl\Billing\Models\BillingAccount;
 use Nvl\Billing\Models\BillingSubscription;
 use Nvl\Billing\Models\BillingSubscriptionItem;
+use Nvl\Billing\Ownership\BillingAdoptionAdapter;
+use Nvl\Billing\Ownership\BillingResourceRegistrar;
 use Nvl\Billing\Services\BillingAccess;
 use Nvl\Billing\Services\BillingDoctor;
 use Nvl\Billing\Services\BillingPortal;
 use Nvl\Billing\Services\DenyBillingManagementAccess;
 use Nvl\Billing\Services\StripeBillingGateway;
 use Nvl\Billing\Services\StripeSubscriptionReader;
+use Nvl\Ownership\Services\OwnershipAdoptionRegistry;
 use Nvl\Support\Bindings\RequiredBindingDefinition;
 use Nvl\Support\Bindings\RequiredBindings;
 use Nvl\Support\Doctor\DoctorCheck;
 use Nvl\Support\Doctor\PackageDoctorContributor;
 use Nvl\Support\Globals\GlobalNames;
+use Nvl\Support\Ownership\Contracts\OwnershipIntegratedProvider;
+use Nvl\Support\Ownership\Services\OwnershipResourceRegistry;
 use Nvl\Support\Traits\MergesPackageConfiguration;
 use Nvl\Support\Traits\RegistersNamespacedResources;
 
 /** Registers the isolated Cashier models and opt-in Billing resources. */
-final class BillingServiceProvider extends ServiceProvider
+final class BillingServiceProvider extends ServiceProvider implements OwnershipIntegratedProvider
 {
     use MergesPackageConfiguration;
     use RegistersNamespacedResources;
@@ -60,6 +65,12 @@ final class BillingServiceProvider extends ServiceProvider
         if (config('nvl-billing.adoption.cashier_routes') === true) {
             Cashier::ignoreRoutes();
         }
+        $this->app->booted(function (): void {
+            (new BillingResourceRegistrar)->register($this->app->make(OwnershipResourceRegistry::class), config('nvl-ownership.enabled') === true && config('nvl-billing.ownership.scoped', true) === true);
+            if ($this->app->bound(OwnershipAdoptionRegistry::class)) {
+                $this->app->make(OwnershipAdoptionRegistry::class)->register('billing', BillingAdoptionAdapter::class);
+            }
+        });
         $this->app->singleton(PlanCatalog::class, static fn (): PlanCatalog => PlanCatalog::fromConfig(config('nvl-billing.prices', [])));
         $this->app->bindIf(BillingManagementAccess::class, DenyBillingManagementAccess::class);
         $this->app->bindIf(BillingGateway::class, StripeBillingGateway::class);
@@ -84,10 +95,6 @@ final class BillingServiceProvider extends ServiceProvider
         $this->commands([BillingDoctorCommand::class, BillingReconcileCommand::class]);
 
         if (config('nvl-billing.enabled') === true) {
-            if (config('nvl-tenancy.enabled') !== true) {
-                throw BillingException::because(BillingResponseCode::InvalidConfiguration, 'Tenancy must be enabled before Billing.');
-            }
-
             if (! is_string(config('cashier.webhook.secret')) || config('cashier.webhook.secret') === '') {
                 throw BillingException::because(BillingResponseCode::InvalidConfiguration, 'A Stripe webhook signing secret is required when Billing is enabled.');
             }

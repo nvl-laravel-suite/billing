@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 use Carbon\CarbonImmutable;
 use Illuminate\Auth\GenericUser;
-use Nvl\Billing\Actions\StartCheckoutAction;
-use Nvl\Billing\Actions\UpdateBillingContactAction;
-use Nvl\Billing\Contracts\BillingManagementAccess;
+use Nvl\Billing\Compatibility\Actions\StartCheckoutAction;
+use Nvl\Billing\Compatibility\Actions\UpdateBillingContactAction;
+use Nvl\Billing\Compatibility\Contracts\BillingManagementAccess;
 use Nvl\Billing\Events\BillingAccountChanged;
 use Nvl\Billing\Events\BillingCheckoutStarted;
 use Nvl\Billing\Events\BillingSubscriptionChanged;

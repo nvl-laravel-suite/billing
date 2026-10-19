@@ -5,15 +5,15 @@ declare(strict_types=1);
 namespace Nvl\Billing\Contracts;
 
 use Nvl\Billing\ValueObjects\BillingSnapshot;
-use Nvl\Support\Tenancy\ValueObjects\TenantId;
+use Nvl\Support\Ownership\ValueObjects\OwnerReference;
 
 /**
- * Resolves the tenant's effective billing features and limits.
+ * Resolves the owner's effective billing features and limits.
  *
  * @api
  */
 interface BillingAccessContract
 {
-    /** Return one tenant's effective access without using ambient tenant context. */
-    public function forTenant(TenantId $tenant): BillingSnapshot;
+    /** Return one owner's effective access without using ambient tenant context. */
+    public function forOwner(OwnerReference $owner): BillingSnapshot;
 }

@@ -20,14 +20,13 @@ use Nvl\Billing\Exceptions\BillingException;
 use Nvl\Billing\Models\BillingAccount;
 use Nvl\Billing\Models\BillingSubscription;
 use Nvl\Billing\Services\BillingEvents;
+use Nvl\Billing\Services\BillingOwnerBoundary;
 use Nvl\Billing\ValueObjects\CheckoutAttempt;
 use Nvl\Billing\ValueObjects\CheckoutSession;
-use Nvl\Support\Tenancy\Contracts\TenantDirectory;
-use Nvl\Support\Tenancy\Enums\TenantStatus;
-use Nvl\Support\Tenancy\ValueObjects\TenantId;
+use Nvl\Support\Ownership\ValueObjects\OwnerReference;
 
 /**
- * Starts one tenant's hosted subscription Checkout without duplicate sessions.
+ * Starts one owner's hosted subscription Checkout without duplicate sessions.
  *
  * @api
  */
@@ -35,7 +34,7 @@ final readonly class StartCheckoutAction implements StartCheckoutContract
 {
     /** Inject the tenant, permission, catalog, and Stripe boundaries. */
     public function __construct(
-        private TenantDirectory $tenants,
+        private BillingOwnerBoundary $ownership,
         private BillingManagementAccess $management,
         private PlanCatalog $catalog,
         private BillingGateway $gateway,
@@ -43,13 +42,13 @@ final readonly class StartCheckoutAction implements StartCheckoutContract
     ) {}
 
     /**
-     * Start or return the existing Checkout for one tenant and Price.
+     * Start or return the existing Checkout for one owner and Price.
      *
      * @throws DomainException When the tenant has a subscription or a different pending Price
      * @throws InvalidArgumentException When checkout input is invalid
      */
     public function execute(
-        TenantId $tenant,
+        OwnerReference $owner,
         Authenticatable $actor,
         string $billingEmail,
         string $plan,
@@ -61,17 +60,15 @@ final readonly class StartCheckoutAction implements StartCheckoutContract
             throw BillingException::because(BillingResponseCode::FeatureDisabled, 'Billing is disabled.');
         }
 
-        $this->management->assertCanManage($actor, $tenant);
-        if ($this->tenants->find($tenant)->status !== TenantStatus::Active) {
-            throw BillingException::because(BillingResponseCode::TenantInactive, 'Only active tenants may start billing.');
-        }
+        $this->management->assertCanManage($actor, $owner);
+        $this->ownership->assertActor($owner, $actor);
 
         if (filter_var($billingEmail, FILTER_VALIDATE_EMAIL) === false) {
             throw new InvalidArgumentException('A valid billing email is required.');
         }
 
         $price = $this->catalog->priceFor($plan, $interval);
-        $account = $this->accountFor($tenant, $billingEmail);
+        $account = $this->accountFor($owner, $billingEmail);
         $attempt = DB::connection($account->getConnectionName())->transaction(
             fn (): CheckoutAttempt => $this->reserveAttempt($account, $price),
         );
@@ -107,11 +104,11 @@ final readonly class StartCheckoutAction implements StartCheckoutContract
     }
 
     /** Create the unique tenant account, recovering a competing insert. */
-    private function accountFor(TenantId $tenant, string $email): BillingAccount
+    private function accountFor(OwnerReference $owner, string $email): BillingAccount
     {
         try {
-            return (new BillingAccount)->getConnection()->transaction(function () use ($tenant, $email): BillingAccount {
-                $account = BillingAccount::query()->firstOrCreate(['tenant_id' => $tenant->value], ['email' => $email]);
+            return (new BillingAccount)->getConnection()->transaction(function () use ($email): BillingAccount {
+                $account = BillingAccount::query()->firstOrCreate([], ['email' => $email]);
                 if ($account->wasRecentlyCreated) {
                     ($this->events ?? BillingEvents::current())->accountChanged($account, 'created');
                 }
@@ -119,7 +116,7 @@ final readonly class StartCheckoutAction implements StartCheckoutContract
                 return $account;
             });
         } catch (UniqueConstraintViolationException) {
-            return BillingAccount::query()->where('tenant_id', $tenant->value)->firstOrFail();
+            return BillingAccount::query()->where('owner_scope_key', $owner->scopeKey())->firstOrFail();
         }
     }
 

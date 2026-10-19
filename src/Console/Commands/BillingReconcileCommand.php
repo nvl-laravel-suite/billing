@@ -4,39 +4,43 @@ declare(strict_types=1);
 
 namespace Nvl\Billing\Console\Commands;
 
-use DomainException;
 use Illuminate\Console\Command;
 use Nvl\Billing\Models\BillingAccount;
 use Nvl\Billing\Services\BillingReconciler;
-use Nvl\Support\Tenancy\ValueObjects\TenantId;
+use Nvl\Support\Ownership\Contracts\OwnershipReadiness;
+use Nvl\Support\Ownership\Contracts\OwnershipSystemRunner;
+use Nvl\Support\Ownership\Exceptions\OwnershipViolation;
+use Nvl\Support\Ownership\ValueObjects\OwnerReference;
 
-/** Repairs local billing state from current Stripe subscriptions. */
+/** Reconciles explicit native billing owners under fresh named maintenance admission. */
 final class BillingReconcileCommand extends Command
 {
-    protected $signature = 'nvl:billing:reconcile {--tenant= : Reconcile only this tenant UUID}';
+    protected $signature = 'nvl:billing:reconcile {--owner= : Complete native owner reference JSON}';
 
-    protected $description = 'Reconcile tenant subscriptions from Stripe';
+    protected $description = 'Reconcile owner subscriptions from Stripe';
 
-    /** Reconcile one tenant or page through all Stripe-backed accounts. */
-    public function handle(BillingReconciler $reconciler): int
+    /** Enumerate protected owner identity only and admit each operation before reading financial data. */
+    public function handle(BillingReconciler $reconciler, OwnershipSystemRunner $runner, OwnershipReadiness $readiness): int
     {
-        if (config('nvl-billing.enabled') !== true) {
-            throw new DomainException('Billing is disabled.');
-        }
-
-        $selected = $this->option('tenant');
+        $readiness->assertActive('billing.accounts');
+        $selected = $this->option('owner');
         if (is_string($selected) && $selected !== '') {
-            $reconciler->reconcile(new TenantId($selected));
+            $owner = OwnerReference::fromJson($selected);
+            $runner->runSystem($owner, 'billing.reconcile', fn () => $reconciler->reconcile($owner));
 
             return self::SUCCESS;
         }
-
-        BillingAccount::query()->whereNotNull('stripe_id')->select(['id', 'tenant_id'])
-            ->chunkById(100, static function ($accounts) use ($reconciler): void {
-                foreach ($accounts as $account) {
-                    $reconciler->reconcile(new TenantId($account->tenant_id));
-                }
-            });
+        $model = new BillingAccount;
+        foreach ($model->getConnection()->table($model->getTable())->useWritePdo()->whereNotNull('stripe_id')->orderBy('id')->select(['id', 'owner_scope_key', 'owner_reference'])->lazyById(100) as $row) {
+            if (! is_string($row->owner_reference)) {
+                throw new OwnershipViolation;
+            }
+            $owner = OwnerReference::fromJson($row->owner_reference);
+            if ($row->owner_scope_key !== $owner->scopeKey()) {
+                throw new OwnershipViolation;
+            }
+            $runner->runSystem($owner, 'billing.reconcile', fn () => $reconciler->reconcile($owner));
+        }
 
         return self::SUCCESS;
     }

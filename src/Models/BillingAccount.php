@@ -12,14 +12,19 @@ use Illuminate\Support\Carbon;
 use Laravel\Cashier\Billable;
 use Nvl\Billing\Database\Factories\BillingAccountFactory;
 use Nvl\Billing\Definitions\Tables\BillingTables;
+use Nvl\Billing\Models\Concerns\HasBillingOwnership;
 use Nvl\Billing\Models\Concerns\UsesBillingConnection;
 use Nvl\Support\Config\PackageStorage;
+use Nvl\Support\Ownership\Contracts\Ownable;
 
 /**
  * Represents one tenant's Stripe customer without coupling billing to a user.
  *
  * @property string $id
- * @property string $tenant_id
+ * @property string|null $tenant_id
+ * @property string $owner_scope_key
+ * @property string|null $owner_reference
+ * @property CarbonImmutable|null $provider_deleted_at
  * @property string|null $name
  * @property string $email
  * @property string|null $stripe_id
@@ -33,9 +38,10 @@ use Nvl\Support\Config\PackageStorage;
  *
  * @api
  */
-final class BillingAccount extends Model
+final class BillingAccount extends Model implements Ownable
 {
     use Billable;
+    use HasBillingOwnership;
 
     /** @use HasFactory<BillingAccountFactory> */
     use HasFactory;
@@ -55,6 +61,7 @@ final class BillingAccount extends Model
     {
         return [
             'trial_consumed_at' => 'datetime',
+            'provider_deleted_at' => 'immutable_datetime',
             'trial_ends_at' => 'datetime',
             'pending_checkout_expires_at' => 'immutable_datetime',
             'pending_checkout_trial_days' => 'integer',

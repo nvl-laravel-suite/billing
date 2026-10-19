@@ -30,7 +30,7 @@ class BillingException extends DomainException implements RespondableException
         $exception = new self($diagnosticMessage, previous: $previous);
         $status = match ($code) {
             BillingResponseCode::FeatureDisabled => 404,
-            BillingResponseCode::TenantInactive, BillingResponseCode::CheckoutConflict, BillingResponseCode::SubscriptionConflict,
+            BillingResponseCode::OwnerInactive, BillingResponseCode::TenantInactive, BillingResponseCode::CheckoutConflict, BillingResponseCode::SubscriptionConflict,
             BillingResponseCode::ProviderIdentityMismatch, BillingResponseCode::OperationConflict, BillingResponseCode::PaymentStateInvalid,
             BillingResponseCode::ReconciliationRequired => 409,
             BillingResponseCode::InvalidConfiguration, BillingResponseCode::StorageUnavailable => 500,

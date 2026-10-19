@@ -40,7 +40,6 @@ final class BillingDoctor
         $enabled = config('nvl-billing.enabled') === true;
         $checks = [
             'billing_enabled' => $enabled,
-            'tenancy_enabled' => config('nvl-tenancy.enabled') === true,
             'stripe_secret' => is_string(config('cashier.secret')) && config('cashier.secret') !== '',
             'webhook_secret' => is_string(config('cashier.webhook.secret')) && config('cashier.webhook.secret') !== '',
             'cashier_customer_model' => config('nvl-billing.adoption.cashier_models') !== true || Cashier::$customerModel === BillingAccount::class,
@@ -53,7 +52,7 @@ final class BillingDoctor
             $checks['price_catalog'] = false;
         }
 
-        $configuredConnection = config('nvl-billing.connection') ?? config('nvl-tenancy.connection');
+        $configuredConnection = (new BillingAccount)->getConnectionName();
         $connection = is_string($configuredConnection) ? $configuredConnection : null;
         foreach ([BillingTables::get(BillingTables::Accounts), BillingTables::get(BillingTables::Subscriptions), BillingTables::get(BillingTables::SubscriptionItems), BillingTables::get(BillingTables::WebhookEvents)] as $table) {
             $checks[$table] = ! $enabled || Schema::connection($connection)->hasTable($table);

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Nvl\Billing\Tests;
 
 use Illuminate\Foundation\Testing\DatabaseMigrations;
-use Nvl\Billing\Providers\BillingServiceProvider;
+use Nvl\Billing\Compatibility\LegacyBillingServiceProvider as BillingServiceProvider;
 use Nvl\Data\Providers\DataServiceProvider;
 use Nvl\Support\Providers\LocaleServiceProvider;
 use Nvl\Support\Providers\SupportServiceProvider;

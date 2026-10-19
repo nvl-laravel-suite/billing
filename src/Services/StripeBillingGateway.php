@@ -26,6 +26,9 @@ final class StripeBillingGateway implements BillingGateway
         CarbonImmutable $expiresAt,
         string $attemptId,
     ): CheckoutSession {
+        if ($account->provider_deleted_at !== null) {
+            throw BillingException::because(BillingResponseCode::SubscriptionConflict, 'The historical billing customer was deleted by its provider.');
+        }
         if ($account->stripe_id === null) {
             $account->createAsStripeCustomer([], ['idempotency_key' => "{$attemptId}-customer"]);
         }
@@ -43,7 +46,7 @@ final class StripeBillingGateway implements BillingGateway
         $subscriptionData = [
             'metadata' => [
                 'type' => $subscriptionType,
-                'tenant_id' => $account->tenant_id,
+                ...($account->tenant_id !== null ? ['tenant_id' => $account->tenant_id] : ['billing_account_id' => $account->id]),
             ],
         ];
 
@@ -56,7 +59,7 @@ final class StripeBillingGateway implements BillingGateway
 
         $session = Cashier::stripe()->checkout->sessions->create([
             'customer' => $customerId,
-            'client_reference_id' => $account->tenant_id,
+            'client_reference_id' => $account->tenant_id ?? $account->id,
             'mode' => 'subscription',
             'line_items' => [['price' => $price, 'quantity' => 1]],
             'subscription_data' => $subscriptionData,

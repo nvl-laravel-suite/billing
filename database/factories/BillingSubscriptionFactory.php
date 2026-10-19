@@ -17,6 +17,9 @@ use Nvl\Billing\Models\BillingSubscription;
  */
 final class BillingSubscriptionFactory extends Factory
 {
+    /** @use PersistsBillingOwnership<BillingSubscription> */
+    use PersistsBillingOwnership;
+
     protected $model = BillingSubscription::class;
 
     /**

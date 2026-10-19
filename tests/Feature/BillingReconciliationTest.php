@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
+use Nvl\Billing\Compatibility\Services\BillingReconciler;
 use Nvl\Billing\Contracts\SubscriptionReader;
 use Nvl\Billing\Models\BillingAccount;
-use Nvl\Billing\Services\BillingReconciler;
 use Nvl\Tenancy\ValueObjects\TenantId;
 
 it('repairs stale local subscription state from the current Stripe object', function (): void {

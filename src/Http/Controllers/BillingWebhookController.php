@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Nvl\Billing\Definitions\Tables\BillingTables;
 use Nvl\Billing\Models\BillingAccount;
+use Nvl\Billing\Ownership\BillingProviderAdmission;
 use Nvl\Billing\Services\BillingAccountStateUpdater;
 use Nvl\Billing\Services\BillingCustomerSyncer;
 use Nvl\Billing\Services\BillingSubscriptionSyncer;
@@ -22,6 +23,7 @@ final class BillingWebhookController
         private readonly BillingSubscriptionSyncer $subscriptions,
         private readonly BillingAccountStateUpdater $accounts,
         private readonly BillingCustomerSyncer $customers,
+        private readonly BillingProviderAdmission $ownership,
     ) {}
 
     /** Apply one signed Stripe event through Cashier and record its side effects. */
@@ -37,12 +39,24 @@ final class BillingWebhookController
             || $payload['data']['object']['id'] === '' || strlen($payload['data']['object']['id']) > 255) {
             return response()->json(['message' => 'Invalid Stripe event.'], 400);
         }
+        $eventPayload = [];
+        foreach ($payload as $key => $value) {
+            if (! is_string($key)) {
+                return response()->json(['message' => 'Invalid Stripe event keys.'], 400);
+            }
+            $eventPayload[$key] = $value;
+        }
         $connection = PackageStorage::connection('billing');
 
-        return DB::connection($connection)->transaction(function () use ($payload, $connection): Response {
+        return $this->ownership->run($eventPayload, fn (): Response => DB::connection($connection)->transaction(function () use ($payload, $connection, $eventPayload): Response {
+            $attributes = $this->ownership->receipt($payload['id'], $payload['type']);
+            if ($attributes === null) {
+                return response()->noContent();
+            }
             $inserted = DB::connection($connection)
                 ->table(BillingTables::get(BillingTables::WebhookEvents))
                 ->insertOrIgnore([
+                    ...$attributes,
                     'stripe_event_id' => $payload['id'],
                     'type' => $payload['type'],
                     'processed_at' => now(),
@@ -52,17 +66,10 @@ final class BillingWebhookController
                 return response()->noContent();
             }
 
-            $event = [];
-            foreach ($payload as $key => $value) {
-                if (is_string($key)) {
-                    $event[$key] = $value;
-                }
-            }
-
-            $this->applyEvent($event);
+            $this->applyEvent($eventPayload);
 
             return response()->noContent();
-        });
+        }));
     }
 
     /**

@@ -6,15 +6,15 @@ namespace Nvl\Billing\Contracts;
 
 use Illuminate\Contracts\Auth\Authenticatable;
 use Nvl\Billing\Models\BillingAccount;
-use Nvl\Support\Tenancy\ValueObjects\TenantId;
+use Nvl\Support\Ownership\ValueObjects\OwnerReference;
 
 /**
- * Updates the authorized tenant's billing correspondence contact.
+ * Updates the authorized owner's billing correspondence contact.
  *
  * @api
  */
 interface UpdateBillingContactContract
 {
-    /** Change the contact only after the host authorizes this tenant. */
-    public function execute(TenantId $tenant, Authenticatable $actor, string $name, string $email): BillingAccount;
+    /** Change the contact only after the host authorizes this owner. */
+    public function execute(OwnerReference $owner, Authenticatable $actor, string $name, string $email): BillingAccount;
 }

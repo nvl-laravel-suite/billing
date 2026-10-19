@@ -13,12 +13,11 @@ use Nvl\Billing\Enums\BillingResponseCode;
 use Nvl\Billing\Exceptions\BillingException;
 use Nvl\Billing\Models\BillingAccount;
 use Nvl\Billing\Services\BillingEvents;
-use Nvl\Support\Tenancy\Contracts\TenantDirectory;
-use Nvl\Support\Tenancy\Enums\TenantStatus;
-use Nvl\Support\Tenancy\ValueObjects\TenantId;
+use Nvl\Billing\Services\BillingOwnerBoundary;
+use Nvl\Support\Ownership\ValueObjects\OwnerReference;
 
 /**
- * Updates the tenant-owned contact used for Stripe billing correspondence.
+ * Updates the owner-owned contact used for Stripe billing correspondence.
  *
  * @api
  */
@@ -26,23 +25,21 @@ final readonly class UpdateBillingContactAction implements UpdateBillingContactC
 {
     /** Inject tenant, authorization, and Stripe boundaries. */
     public function __construct(
-        private TenantDirectory $tenants,
+        private BillingOwnerBoundary $ownership,
         private BillingManagementAccess $management,
         private BillingGateway $gateway,
         private ?BillingEvents $events = null,
     ) {}
 
-    /** Change the contact only after the host authorizes this tenant. */
-    public function execute(TenantId $tenant, Authenticatable $actor, string $name, string $email): BillingAccount
+    /** Change the contact only after the host authorizes this owner. */
+    public function execute(OwnerReference $owner, Authenticatable $actor, string $name, string $email): BillingAccount
     {
         if (config('nvl-billing.enabled') !== true) {
             throw BillingException::because(BillingResponseCode::FeatureDisabled, 'Billing is disabled.');
         }
 
-        $this->management->assertCanManage($actor, $tenant);
-        if ($this->tenants->find($tenant)->status !== TenantStatus::Active) {
-            throw BillingException::because(BillingResponseCode::TenantInactive, 'Only active tenants may change billing contacts.');
-        }
+        $this->management->assertCanManage($actor, $owner);
+        $this->ownership->assertActor($owner, $actor);
 
         $name = trim($name);
         $email = trim($email);
@@ -50,10 +47,10 @@ final readonly class UpdateBillingContactAction implements UpdateBillingContactC
             throw new InvalidArgumentException('A valid billing contact name and email are required.');
         }
 
-        $account = BillingAccount::query()->where('tenant_id', $tenant->value)->first();
+        $account = BillingAccount::query()->where('owner_scope_key', $owner->scopeKey())->first();
         if ($account === null) {
-            return (new BillingAccount)->getConnection()->transaction(function () use ($tenant, $name, $email): BillingAccount {
-                $created = BillingAccount::query()->create(['tenant_id' => $tenant->value, 'name' => $name, 'email' => $email]);
+            return (new BillingAccount)->getConnection()->transaction(function () use ($name, $email): BillingAccount {
+                $created = BillingAccount::query()->create(['name' => $name, 'email' => $email]);
                 ($this->events ?? BillingEvents::current())->accountChanged($created, 'created');
 
                 return $created;

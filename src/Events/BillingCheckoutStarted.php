@@ -13,7 +13,7 @@ use Nvl\Support\Contracts\DomainEvent;
 final readonly class BillingCheckoutStarted implements DomainEvent
 {
     /** Capture the persisted lifecycle fact. */
-    public function __construct(public string $accountId, public string $tenantId, public string $attemptId, public string $sessionId, public int $schemaVersion = 1) {}
+    public function __construct(public string $accountId, public ?string $tenantId, public string $attemptId, public string $sessionId, public int $schemaVersion = 1) {}
 
     /** Return the immutable payload schema version. */
     public function schemaVersion(): int

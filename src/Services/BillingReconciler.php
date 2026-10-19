@@ -10,23 +10,25 @@ use Nvl\Billing\Enums\BillingResponseCode;
 use Nvl\Billing\Exceptions\BillingException;
 use Nvl\Billing\Models\BillingAccount;
 use Nvl\Billing\Models\BillingSubscription;
-use Nvl\Support\Tenancy\ValueObjects\TenantId;
+use Nvl\Support\Ownership\ValueObjects\OwnerReference;
 use TypeError;
 
-/** Repairs a tenant's local Cashier state from Stripe's current objects. */
+/** Repairs a owner's local Cashier state from Stripe's current objects. */
 final readonly class BillingReconciler
 {
     /** Inject the Stripe reader and Cashier synchronization adapter. */
     public function __construct(
         private SubscriptionReader $reader,
+        private BillingOwnerBoundary $ownership,
         private BillingSubscriptionSyncer $syncer,
         private BillingAccountStateUpdater $accounts,
     ) {}
 
-    /** Fetch current Stripe state and apply it atomically to one tenant. */
-    public function reconcile(TenantId $tenant): void
+    /** Fetch current Stripe state and apply it atomically to one owner. */
+    public function reconcile(OwnerReference $owner): void
     {
-        $account = BillingAccount::query()->where('tenant_id', $tenant->value)->first();
+        $this->ownership->assertOwner($owner);
+        $account = BillingAccount::query()->where('owner_scope_key', $owner->scopeKey())->first();
         if ($account === null || $account->stripe_id === null) {
             return;
         }
