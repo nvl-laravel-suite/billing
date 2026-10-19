@@ -8,7 +8,7 @@ php artisan nvl:install billing --dry-run
 php artisan nvl:install billing
 ```
 
-Required NVL dependencies: `nvl/core` (`^5.0`), `nvl/tenancy` (`^5.0`). Bind BillingManagementAccess, configure the plan catalog and gateway, and enable Billing explicitly. Use a persisted active TenantId and an authorized actor.
+Required NVL dependency: `nvl/core` (`^5.1`). Bind BillingManagementAccess, configure the plan catalog and gateway, and enable Billing explicitly. Owner-scoped billing uses optional Ownership and a freshly admitted host owner and actor; Tenancy is a deprecated, explicitly selected compatibility bridge.
 Review the published common config, select one migration owner, and run schema preflight before existing-table upgrades. The installer does not enable features or run migrations. Follow the detailed installation and capability sections below before invoking a storage/provider operation.
 
 Inject `Nvl\Billing\Contracts\BillingPortalContract` in a host service. After supplying the trusted inputs described above, the first public call is:
