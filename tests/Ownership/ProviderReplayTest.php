@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\QueryException;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Nvl\Billing\Definitions\Tables\BillingTables;
 use Nvl\Billing\Models\BillingAccount;
 use Nvl\Billing\Models\BillingSubscription;
+use Nvl\Billing\Ownership\BillingIntegrityGuard;
 use Nvl\Billing\Services\BillingAccess;
 use Nvl\Billing\Tests\OwnerScopeTestCase;
 use Nvl\Ownership\Contracts\OwnerSystemAccess;
@@ -15,6 +17,7 @@ use Nvl\Ownership\Services\OwnershipRunner;
 use Nvl\Ownership\Tests\Fixtures\Actor;
 use Nvl\Ownership\Tests\Fixtures\Company;
 use Nvl\Support\Ownership\Contracts\OwnershipContext;
+use Nvl\Support\Ownership\Exceptions\OwnershipSchemaNotReady;
 use Nvl\Support\Ownership\Exceptions\OwnershipViolation;
 
 uses(OwnerScopeTestCase::class);
@@ -53,4 +56,19 @@ it('resolves signed provider events only through the stored customer owner and p
         $account = BillingAccount::query()->sole();
         expect(fn () => DB::table($account->getTable())->where('id', $account->id)->update(['stripe_id' => 'cus_replacement']))->toThrow(QueryException::class);
     });
+});
+
+it('denies billing effects when customer correlation uniqueness is missing', function (): void {
+    $model = new BillingAccount;
+    $schema = $model->getConnection()->getSchemaBuilder();
+    $name = null;
+    foreach ($schema->getIndexes($model->getTable()) as $index) {
+        if ($index['unique'] && $index['columns'] === ['stripe_id']) {
+            $name = $index['name'];
+        }
+    }
+    expect($name)->toBeString();
+    $schema->table($model->getTable(), fn (Blueprint $table) => $table->dropUnique($name));
+    expect(fn () => app(BillingIntegrityGuard::class)->assertReady())
+        ->toThrow(OwnershipSchemaNotReady::class);
 });

@@ -6,7 +6,6 @@ namespace Nvl\Billing\Ownership;
 
 use Nvl\Billing\Models\BillingAccount;
 use Nvl\Support\Ownership\Contracts\OwnershipReadiness;
-use Nvl\Support\Ownership\Exceptions\OwnershipSchemaNotReady;
 use Nvl\Support\Ownership\Services\OwnershipConstraintInspector;
 
 /** Requires the live immutable customer identity and unique primary billing relationship. @internal */
@@ -21,8 +20,6 @@ final readonly class BillingIntegrityGuard
         $this->readiness->assertActive('billing.accounts');
         $model = new BillingAccount;
         $this->constraints->assertPresent($model->getConnection(), $model->getTable(), 'update', 'assigned:'.hash('sha256', json_encode(['stripe_id'], JSON_THROW_ON_ERROR)));
-        if (! $model->getConnection()->getSchemaBuilder()->hasIndex($model->getTable(), 'nvl_billing_owner_unique', 'unique')) {
-            throw new OwnershipSchemaNotReady('The unique native billing owner constraint is missing.');
-        }
+        $this->constraints->assertUniqueIndexes($model->getConnection(), $model->getTable(), [['owner_scope_key'], ['stripe_id']]);
     }
 }

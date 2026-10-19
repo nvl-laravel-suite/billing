@@ -16,6 +16,7 @@ use Nvl\Ownership\ValueObjects\OwnershipAdoptionPlan;
 use Nvl\Ownership\ValueObjects\OwnershipBackfillResult;
 use Nvl\Ownership\ValueObjects\OwnershipVerification;
 use Nvl\Support\Ownership\Exceptions\OwnershipConfigurationInvalid;
+use Nvl\Support\Ownership\Services\OwnershipConstraintInspector;
 use Nvl\Support\Ownership\Services\OwnershipResourceRegistry;
 
 /**
@@ -31,6 +32,7 @@ final readonly class BillingAdoptionAdapter implements OwnershipAdoptionAdapter
         private OwnershipAdoptionStore $mappings,
         private OwnershipSchema $schema,
         private OwnershipDatabaseConstraints $constraints,
+        private OwnershipConstraintInspector $indexes,
     ) {}
 
     /** @return list<string> */
@@ -57,6 +59,7 @@ final readonly class BillingAdoptionAdapter implements OwnershipAdoptionAdapter
         if (! $accountSchema->hasColumn($account->getTable(), 'provider_deleted_at')) {
             $accountSchema->table($account->getTable(), static fn (Blueprint $table) => $table->timestamp('provider_deleted_at')->nullable());
         }
+        $this->prepareOwnerIndex();
         $this->restoreNativeParents();
     }
 
@@ -171,12 +174,26 @@ final readonly class BillingAdoptionAdapter implements OwnershipAdoptionAdapter
         return new OwnershipBackfillResult($next, $rows->count());
     }
 
+    /** Prepare an additive unique owner slot using a source-specific identifier. */
+    private function prepareOwnerIndex(): void
+    {
+        $account = new ($this->resources->get('billing.accounts')->model);
+        $schema = $account->getConnection()->getSchemaBuilder();
+        $name = $this->indexes->name($account->getConnection(), $account->getTable(), 'index', 'billing-owner');
+        if (! $schema->hasIndex($account->getTable(), $name)) {
+            $schema->table($account->getTable(), static fn (Blueprint $table) => $table->unique('owner_scope_key', $name));
+        }
+    }
+
     /** Verify persisted partitions and the complete canonical domain graph. */
     public function verify(OwnershipAdoptionPlan $plan): OwnershipVerification
     {
         foreach ($this->resources() as $key) {
             $this->schema->verify($key);
         }
+
+        $account = new ($this->resources->get('billing.accounts')->model);
+        $this->indexes->assertUniqueIndexes($account->getConnection(), $account->getTable(), [['owner_scope_key'], ['stripe_id']]);
 
         return new OwnershipVerification([]);
     }
@@ -189,9 +206,6 @@ final readonly class BillingAdoptionAdapter implements OwnershipAdoptionAdapter
         }
         $account = new ($this->resources->get('billing.accounts')->model);
         $this->constraints->freezeAssigned($account->getConnection(), $account->getTable(), ['stripe_id']);
-        $schema = $account->getConnection()->getSchemaBuilder();
-        if (! $schema->hasIndex($account->getTable(), 'nvl_billing_owner_unique')) {
-            $schema->table($account->getTable(), static fn (Blueprint $table) => $table->unique('owner_scope_key', 'nvl_billing_owner_unique'));
-        }
+        $this->prepareOwnerIndex();
     }
 }
