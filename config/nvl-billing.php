@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 /** Complete runtime defaults; publication sections are declared in ../resources/config/sections.json. */
 return [
+    'ownership' => ['scoped' => true],
     'adoption' => ['cashier_models' => false, 'cashier_routes' => false],
     'enabled' => false,
     'routes' => ['webhook' => ['enabled' => false]],

@@ -8,6 +8,7 @@
                 "connection",
                 "enabled",
                 "migrations.enabled",
+                "ownership.scoped",
                 "routes.webhook.enabled"
             ],
             "advanced": [
