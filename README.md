@@ -3,12 +3,12 @@
 ## Quickstart
 
 ```sh
-composer require nvl/billing:^5.0
+composer require nvl/billing:^6.0
 php artisan nvl:install billing --dry-run
 php artisan nvl:install billing
 ```
 
-Required NVL dependency: `nvl/core` (`^5.1`). Bind BillingManagementAccess, configure the plan catalog and gateway, and enable Billing explicitly. Owner-scoped billing uses optional Ownership and a freshly admitted host owner and actor; Tenancy is a deprecated, explicitly selected compatibility bridge.
+Required NVL dependency: `nvl/core` (`^6.0`). Bind BillingManagementAccess, configure the plan catalog and gateway, and enable Billing explicitly. Owner-scoped billing uses optional Ownership and a freshly admitted host owner and actor; Tenancy is a deprecated, explicitly selected compatibility bridge.
 Review the published common config, select one migration owner, and run schema preflight before existing-table upgrades. The installer does not enable features or run migrations. Follow the detailed installation and capability sections below before invoking a storage/provider operation.
 
 Inject `Nvl\Billing\Contracts\BillingPortalContract` in a host service. After supplying the trusted inputs described above, the first public call is:
@@ -17,7 +17,7 @@ Inject `Nvl\Billing\Contracts\BillingPortalContract` in a host service. After su
 use Nvl\Billing\Contracts\BillingPortalContract;
 
 /** @var BillingPortalContract $capability */
-$result = $capability->url($tenant, $actor, $returnUrl);
+$result = $capability->url($ownerReference, $actor, $returnUrl);
 ```
 
 Use the [event catalog](docs/events.md) and [Testing your app](#testing-your-app) below. The suite [getting-started guide](https://github.com/nvl-laravel-suite/laravel-suite/blob/main/docs/getting-started.md) provides a complete Comments host fixture; package archives retain their own local references.
@@ -31,7 +31,7 @@ For support, [open an issue](https://github.com/nvl-laravel-suite/billing/issues
 
 | Item | Value |
 |---|---|
-| Installed through | `composer require nvl/billing:^5.0` |
+| Installed through | `composer require nvl/billing:^6.0` |
 | Module identifier | `nvl/billing` |
 | PHP namespace | `Nvl\Billing` |
 | Service provider | `Nvl\Billing\Providers\BillingServiceProvider` |
@@ -39,18 +39,18 @@ For support, [open an issue](https://github.com/nvl-laravel-suite/billing/issues
 
 ## Purpose and boundaries
 
-Billing owns one Stripe customer per tenant, subscription state, Checkout attempts, consumed trial markers, and a read-only feature snapshot. It uses Laravel Cashier for Stripe subscription synchronization. It does not bill individual users, define an application catalog, measure usage, authorize app features by itself, or provide a customer-facing billing UI. The host application owns pricing presentation, billing administration policy, and feature enforcement.
+Billing owns one Stripe customer per owner, subscription state, Checkout attempts, consumed trial markers, and a read-only feature snapshot. It uses Laravel Cashier for Stripe subscription synchronization. It does not bill individual users, define an application catalog, measure usage, authorize app features by itself, or provide a customer-facing billing UI. The host application owns pricing presentation, billing administration policy, and feature enforcement.
 
-The package requires `nvl/core`, `nvl/tenancy`, and `laravel/cashier`. Billing data stays on the configured central connection. A tenant has one billing account, independent of the user's login model. The 3.x `nvl/laravel-suite` metapackage does not install Billing; add it only to applications that need subscriptions. Explicit Cashier model adoption changes process-global registration; coordinate it with any other Cashier integration in the host application.
+The package requires `nvl/core` and `laravel/cashier`; native isolation uses optional Ownership. Tenancy is a separately selected deprecated bridge. Billing data stays on the configured central connection. An owner has one billing account, independent of the user's login model. The 6.x `nvl/laravel-suite` metapackage does not install Billing; add it only to applications that need subscriptions. Explicit Cashier model adoption changes process-global registration; coordinate it with any other Cashier integration in the host application.
 
 Global Cashier adoption is opt-in: `nvl-billing.adoption.cashier_models` replaces the three Cashier models, while `adoption.cashier_routes` suppresses native Cashier routes. Both default to `false`. NVL webhook ingress is independently enabled with `nvl-billing.routes.webhook.enabled`; enabling Billing services alone preserves host Cashier registration. Doctor reports active adoption and its targets.
 
 ## Requirements and installation
 
-Use PHP 8.4+, Laravel 12–13, Stripe, and an active Tenancy tenant directory. Install the published package from Packagist, then configure it in the host application:
+Use PHP 8.4+, Laravel 12–13, Stripe, and a trusted host owner/admission policy. Install the published package from Packagist, then configure it in the host application:
 
 ```bash
-composer require nvl/billing:^5.0
+composer require nvl/billing:^6.0
 php artisan vendor:publish --tag=nvl-billing-translations
 php artisan vendor:publish --tag=nvl-billing-config
 php artisan vendor:publish --tag=nvl-billing-skills
@@ -92,9 +92,9 @@ The optional trial is offered once per billing account. `trial.days=0` disables 
 
 ## Application integration
 
-Bind `Nvl\Billing\Contracts\BillingManagementAccess` in the host container to authorize the authenticated actor for the selected `TenantId`. The default binding denies management. Resolve the tenant from trusted host routing or session context, never from an untrusted checkout body. Call `UpdateBillingContactAction::execute($tenantId, $actor, $name, $email)` to maintain the tenant's explicit billing contact without changing an Auth profile; an existing Stripe customer is updated before the local record. Call `StartCheckoutAction::execute($tenantId, $actor, $email, $plan, $interval, $successUrl, $cancelUrl)` after authorization; it returns a hosted Checkout URL. Call `BillingPortal::url($tenantId, $actor, $returnUrl)` for subscription changes, payment methods, and cancellation through Stripe's customer portal. Validate allowed return URLs in the host before passing them. Do not unlock paid features from the Checkout success redirect; wait for a signed webhook or reconciliation.
+Bind `Nvl\Billing\Contracts\BillingManagementAccess` in the host container to authorize the authenticated actor for the selected `OwnerReference`. The default binding denies management. Resolve the tenant from trusted host routing or session context, never from an untrusted checkout body. Call `UpdateBillingContactAction::execute($ownerReference, $actor, $name, $email)` to maintain the tenant's explicit billing contact without changing an Auth profile; an existing Stripe customer is updated before the local record. Call `StartCheckoutAction::execute($ownerReference, $actor, $email, $plan, $interval, $successUrl, $cancelUrl)` after authorization; it returns a hosted Checkout URL. Call `BillingPortal::url($ownerReference, $actor, $returnUrl)` for subscription changes, payment methods, and cancellation through Stripe's customer portal. Validate allowed return URLs in the host before passing them. Do not unlock paid features from the Checkout success redirect; wait for a signed webhook or reconciliation.
 
-For host application services, inject the focused workflow contracts. `StartCheckoutContract::execute` returns `CheckoutSession`, `UpdateBillingContactContract::execute` returns a `BillingAccount` identity/result handle, `BillingAccessContract::forTenant` returns `BillingSnapshot`, and `BillingPortalContract::url` returns the hosted portal URL. Their arguments and results match the existing concrete APIs.
+For host application services, inject the focused workflow contracts. `StartCheckoutContract::execute` returns `CheckoutSession`, `UpdateBillingContactContract::execute` returns a `BillingAccount` identity/result handle, `BillingAccessContract::forOwner` returns `BillingSnapshot`, and `BillingPortalContract::url` returns the hosted portal URL. Their arguments and results match the existing concrete APIs.
 
 ```php
 use Illuminate\Contracts\Auth\Authenticatable;
@@ -103,9 +103,9 @@ use Nvl\Billing\Contracts\BillingPortalContract;
 use Nvl\Billing\Contracts\StartCheckoutContract;
 use Nvl\Billing\Contracts\UpdateBillingContactContract;
 use Nvl\Billing\ValueObjects\CheckoutSession;
-use Nvl\Support\Tenancy\ValueObjects\TenantId;
+use Nvl\Support\Ownership\ValueObjects\OwnerReference;
 
-final readonly class TenantBilling
+final readonly class OwnerBilling
 {
     public function __construct(
         private StartCheckoutContract $checkout,
@@ -115,7 +115,7 @@ final readonly class TenantBilling
     ) {}
 
     public function start(
-        TenantId $tenant,
+        OwnerReference $ownerReference,
         Authenticatable $actor,
         string $name,
         string $email,
@@ -124,29 +124,29 @@ final readonly class TenantBilling
         string $successUrl,
         string $cancelUrl,
     ): CheckoutSession {
-        $this->contact->execute($tenant, $actor, $name, $email);
+        $this->contact->execute($ownerReference, $actor, $name, $email);
 
-        return $this->checkout->execute($tenant, $actor, $email, $plan, $interval, $successUrl, $cancelUrl);
+        return $this->checkout->execute($ownerReference, $actor, $email, $plan, $interval, $successUrl, $cancelUrl);
     }
 
-    public function reportsEnabled(TenantId $tenant): bool
+    public function reportsEnabled(OwnerReference $tenant): bool
     {
-        return $this->access->forTenant($tenant)->allows('advanced_reports');
+        return $this->access->forOwner($tenant)->allows('advanced_reports');
     }
 
-    public function portalUrl(TenantId $tenant, Authenticatable $actor, string $returnUrl): string
+    public function portalUrl(OwnerReference $ownerReference, Authenticatable $actor, string $returnUrl): string
     {
-        return $this->portal->url($tenant, $actor, $returnUrl);
+        return $this->portal->url($ownerReference, $actor, $returnUrl);
     }
 }
 ```
 
 The provider installs each default with transient `bindIf`, preserving a host instance or closure registered before discovery. A later `$app->instance(Contract::class, $substitute)` reaches services resolved afterward; previously constructed services retain their injected dependency. Tests may substitute these interfaces with a Mockery mock or their own implementation and return the declared native value/model handle. The concrete Actions and services remain available with their existing constructors. Keep `BillingGateway`, `SubscriptionReader`, and `BillingManagementAccess` as the Stripe, reconciliation, and authorization extension seams; authorization still denies by default.
 
-Read access through `BillingAccessContract::forTenant($tenantId)`:
+Read access through `BillingAccessContract::forOwner($ownerReference)`:
 
 ```php
-$snapshot = app(\Nvl\Billing\Contracts\BillingAccessContract::class)->forTenant($tenantId);
+$snapshot = app(\Nvl\Billing\Contracts\BillingAccessContract::class)->forOwner($ownerReference);
 
 if ($snapshot->allows('advanced_reports')) {
     // Show the host-owned report.
@@ -271,7 +271,7 @@ These runtime builders keep Laravel's native Factory API. The listed methods nam
 
 | Factory | Explicit states |
 | --- | --- |
-| [`BillingAccountFactory`](database/factories/BillingAccountFactory.php) | `forTenant(Tenant $tenant)` |
+| [`BillingAccountFactory`](database/factories/BillingAccountFactory.php) | `forOwner(Tenant $tenant)` |
 | [`BillingSubscriptionFactory`](database/factories/BillingSubscriptionFactory.php) | `forAccount(BillingAccount $parent)` |
 | [`BillingSubscriptionItemFactory`](database/factories/BillingSubscriptionItemFactory.php) | `forSubscription(BillingSubscription $parent)` |
 
@@ -316,9 +316,9 @@ public function register(): void
 
 | Host adapter contract | Required native signature |
 | --- | --- |
-| `BillingManagementAccess` | `assertCanManage(Authenticatable $actor, TenantId $tenant): void` |
+| `BillingManagementAccess` | `assertCanManage(Authenticatable $actor, OwnerReference $tenant): void` |
 
-`Authenticatable` is Laravel’s contract and `Model` is Eloquent’s base. Use trusted persisted host identity; never return an arbitrary request-provided principal or infer ownership from a matching amount. DTOs/enums come from this package; `TenantId` comes from neutral Core Tenancy.
+`Authenticatable` is Laravel’s contract and `Model` is Eloquent’s base. Use trusted persisted host identity; never return an arbitrary request-provided principal or infer ownership from a matching amount. DTOs/enums come from this package; `OwnerReference` comes from neutral Core Ownership.
 
 The actor’s authority is specific to the supplied active tenant. The binding is required when `nvl-billing.enabled=true`; configuring a Stripe gateway does not supply management authorization.
 

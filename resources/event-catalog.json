@@ -16,7 +16,7 @@
         },
         {
           "name": "tenantId",
-          "type": "string",
+          "type": "?string",
           "visibility": "public",
           "required": true
         },
@@ -41,7 +41,7 @@
         },
         {
           "name": "tenantId",
-          "type": "string"
+          "type": "?string"
         },
         {
           "name": "operation",
@@ -133,7 +133,7 @@
         },
         {
           "name": "tenantId",
-          "type": "string",
+          "type": "?string",
           "visibility": "public",
           "required": true
         },
@@ -164,7 +164,7 @@
         },
         {
           "name": "tenantId",
-          "type": "string"
+          "type": "?string"
         },
         {
           "name": "attemptId",
@@ -222,7 +222,7 @@
         },
         {
           "name": "tenantId",
-          "type": "string",
+          "type": "?string",
           "visibility": "public",
           "required": true
         },
@@ -257,7 +257,7 @@
         },
         {
           "name": "tenantId",
-          "type": "string"
+          "type": "?string"
         },
         {
           "name": "previousStatus",

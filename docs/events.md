@@ -20,7 +20,7 @@ Use Nvl\Support\Events\DomainEventDispatcher::dispatch($event, $writerConnection
 
 ## Payload security and no-op behavior
 
-Account/subscription/tenant and Stripe session identifiers only. No contact name/email, checkout URL, payment method details or raw provider payload. tenantId is persisted account ownership; it is not listener authorization.
+Account/subscription/tenant and Stripe session identifiers only. No contact name/email, checkout URL, payment method details or raw provider payload. tenantId is a nullable historical tenant identifier and may be null for native ownership. It is not listener authorization or an owner selector. Preserve the captured producer/owner context and re-authorize any subsequent storage read.
 
 Disabled Billing emits nothing. Unchanged contact/customer/subscription/item replays emit nothing. A checkout event requires the first persisted matching pending-attempt session. Webhook and reconciliation share writers; repeated cancellation preserves ends_at and emits no duplicate transition.
 
@@ -49,7 +49,7 @@ Constructor parameters, in native order:
 | Parameter | Native PHP type | Visibility | Default | Collection shape |
 | --- | --- | --- | --- | --- |
 | `$accountId` | `string` | public | `required` | — |
-| `$tenantId` | `string` | public | `required` | — |
+| `$tenantId` | `?string` | public | `required` | — |
 | `$operation` | `string` | public | `required` | — |
 | `$schemaVersion` | `int` | public | `1` | — |
 
@@ -58,7 +58,7 @@ Public payload fields:
 | Field | Native PHP type | Collection shape |
 | --- | --- | --- |
 | `$accountId` | `string` | — |
-| `$tenantId` | `string` | — |
+| `$tenantId` | `?string` | — |
 | `$operation` | `string` | — |
 | `$schemaVersion` | `int` | — |
 
@@ -91,7 +91,7 @@ Constructor parameters, in native order:
 | Parameter | Native PHP type | Visibility | Default | Collection shape |
 | --- | --- | --- | --- | --- |
 | `$accountId` | `string` | public | `required` | — |
-| `$tenantId` | `string` | public | `required` | — |
+| `$tenantId` | `?string` | public | `required` | — |
 | `$attemptId` | `string` | public | `required` | — |
 | `$sessionId` | `string` | public | `required` | — |
 | `$schemaVersion` | `int` | public | `1` | — |
@@ -101,7 +101,7 @@ Public payload fields:
 | Field | Native PHP type | Collection shape |
 | --- | --- | --- |
 | `$accountId` | `string` | — |
-| `$tenantId` | `string` | — |
+| `$tenantId` | `?string` | — |
 | `$attemptId` | `string` | — |
 | `$sessionId` | `string` | — |
 | `$schemaVersion` | `int` | — |
@@ -130,7 +130,7 @@ Constructor parameters, in native order:
 | --- | --- | --- | --- | --- |
 | `$subscriptionId` | `string` | public | `required` | — |
 | `$accountId` | `string` | public | `required` | — |
-| `$tenantId` | `string` | public | `required` | — |
+| `$tenantId` | `?string` | public | `required` | — |
 | `$previousStatus` | `?string` | public | `required` | — |
 | `$currentStatus` | `string` | public | `required` | — |
 | `$schemaVersion` | `int` | public | `1` | — |
@@ -141,7 +141,7 @@ Public payload fields:
 | --- | --- | --- |
 | `$subscriptionId` | `string` | — |
 | `$accountId` | `string` | — |
-| `$tenantId` | `string` | — |
+| `$tenantId` | `?string` | — |
 | `$previousStatus` | `?string` | — |
 | `$currentStatus` | `string` | — |
 | `$schemaVersion` | `int` | — |
