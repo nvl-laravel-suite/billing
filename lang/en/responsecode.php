@@ -6,6 +6,7 @@ return [
     'binding_required' => 'This capability requires an application adapter.',
     'operation_failed' => 'The operation could not be completed.',
     'feature_disabled' => 'This capability is unavailable.',
+    'owner_inactive' => 'The selected owner is unavailable.',
     'tenant_inactive' => 'The tenant is inactive.',
     'checkout_conflict' => 'An existing checkout prevents this operation.',
     'subscription_conflict' => 'The subscription state prevents this operation.',

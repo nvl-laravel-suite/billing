@@ -7,6 +7,10 @@ All notable changes to `nvl/billing` are documented here.
 
 ## [6.0.0] - 2026-10-20
 
+### Release fixes
+
+- Publish the existing native ownership default in common configuration and translate the owner-unavailable response in English and Bulgarian.
+
 ### Changed
 
 - Add native owner-oriented billing contracts and configured BillingAccount roots without requiring Tenancy. Preserve provider customer/subscription correlation, idempotency and management authorization; retain tenant entry points only as deprecated bridge APIs.
