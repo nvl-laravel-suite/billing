@@ -6,7 +6,9 @@ namespace Nvl\Billing\Enums;
 
 use Nvl\Support\Contracts\ResponseCode;
 
-/** Stable public response codes for Billing.
+/**
+ * Stable public response codes for Billing.
+ *
  * @api
  */
 enum BillingResponseCode: string implements ResponseCode

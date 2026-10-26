@@ -12,13 +12,18 @@ use Nvl\Billing\Models\BillingAccount;
 use Nvl\Billing\Models\BillingSubscription;
 use Nvl\Support\Events\DomainEventDispatcher;
 
-/** Publishes bounded Billing facts from reusable local write boundaries. */
+/**
+ * Publishes bounded Billing facts from reusable local write boundaries.
+ *
+ * @internal
+ */
 final readonly class BillingEvents
 {
     /** Retain the native source-aware dispatcher. */
     public function __construct(private DomainEventDispatcher $events) {}
 
-    /** Preserve manual Action construction through the current host event boundary.
+    /**
+     * Preserve manual Action construction through the current host event boundary.
      *
      * @internal
      */

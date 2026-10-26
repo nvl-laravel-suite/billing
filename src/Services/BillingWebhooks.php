@@ -12,7 +12,11 @@ use Nvl\Billing\Ownership\BillingProviderAdmission;
 use Nvl\Support\Config\PackageStorage;
 use Stripe\WebhookSignature;
 
-/** Verifies, deduplicates, and synchronizes tenant Stripe billing events. */
+/**
+ * Verifies, deduplicates, and synchronizes tenant Stripe billing events.
+ *
+ * @api
+ */
 final class BillingWebhooks
 {
     /** Inject subscription and account synchronization boundaries. */

@@ -11,7 +11,11 @@ use Nvl\Billing\Models\BillingAccount;
 use Nvl\Billing\Models\BillingSubscription;
 use Nvl\Billing\Models\BillingSubscriptionItem;
 
-/** Applies a signed or fetched Stripe subscription to Cashier-owned models. */
+/**
+ * Applies a signed or fetched Stripe subscription to Cashier-owned models.
+ *
+ * @internal
+ */
 final class BillingSubscriptionSyncer
 {
     /** Retain the shared Billing fact publisher. */
@@ -92,7 +96,8 @@ final class BillingSubscriptionSyncer
         });
     }
 
-    /** Cancel a missing or deleted-provider subscription once without restamping replays.
+    /**
+     * Cancel a missing or deleted-provider subscription once without restamping replays.
      *
      * @internal
      */

@@ -11,7 +11,9 @@ use Nvl\Support\Exceptions\ExceptionResponse;
 use Nvl\Support\Traits\InteractsWithPackageFailure;
 use Throwable;
 
-/** Expected Billing domain, configuration and infrastructure failures.
+/**
+ * Expected Billing domain, configuration and infrastructure failures.
+ *
  * @api
  */
 class BillingException extends DomainException implements RespondableException

@@ -8,7 +8,11 @@ use Nvl\Billing\Models\BillingAccount;
 use Nvl\Support\Ownership\Contracts\OwnershipReadiness;
 use Nvl\Support\Ownership\Services\OwnershipConstraintInspector;
 
-/** Requires the live immutable customer identity and unique primary billing relationship. @internal */
+/**
+ * Requires the live immutable customer identity and unique primary billing relationship.
+ *
+ * @internal
+ */
 final readonly class BillingIntegrityGuard
 {
     /** Retain source inspection capabilities without importing the optional enforcing runtime. */

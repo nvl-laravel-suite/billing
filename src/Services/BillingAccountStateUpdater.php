@@ -6,7 +6,11 @@ namespace Nvl\Billing\Services;
 
 use Nvl\Billing\Models\BillingAccount;
 
-/** Updates the trial and pending Checkout markers after Stripe confirms state. */
+/**
+ * Updates the trial and pending Checkout markers after Stripe confirms state.
+ *
+ * @internal
+ */
 final class BillingAccountStateUpdater
 {
     /** Retain the shared committed fact publisher. */

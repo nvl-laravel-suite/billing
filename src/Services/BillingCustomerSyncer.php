@@ -7,7 +7,11 @@ namespace Nvl\Billing\Services;
 use Nvl\Billing\Models\BillingAccount;
 use Nvl\Billing\Models\BillingSubscription;
 
-/** Persists signed provider customer changes through atomic local write boundaries. */
+/**
+ * Persists signed provider customer changes through atomic local write boundaries.
+ *
+ * @internal
+ */
 final readonly class BillingCustomerSyncer
 {
     /** Reuse the same subscription writer and committed fact publisher. */

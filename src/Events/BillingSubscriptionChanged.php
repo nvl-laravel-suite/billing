@@ -6,7 +6,8 @@ namespace Nvl\Billing\Events;
 
 use Nvl\Support\Contracts\DomainEvent;
 
-/** A committed Billing identity snapshot without contact or provider payload data.
+/**
+ * A committed Billing identity snapshot without contact or provider payload data.
  *
  * @api
  */

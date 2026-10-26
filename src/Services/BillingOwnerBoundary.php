@@ -11,7 +11,11 @@ use Nvl\Support\Ownership\Services\OwnershipContextResolver;
 use Nvl\Support\Ownership\Services\OwnershipResourceRegistry;
 use Nvl\Support\Ownership\ValueObjects\OwnerReference;
 
-/** Validates explicit billing subjects against fresh admitted native ownership. @internal */
+/**
+ * Validates explicit billing subjects against fresh admitted native ownership.
+ *
+ * @internal
+ */
 final readonly class BillingOwnerBoundary
 {
     /** Retain neutral ownership contracts rather than a directory or lifecycle dependency. */

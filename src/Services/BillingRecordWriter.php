@@ -8,7 +8,11 @@ use Nvl\Billing\Models\BillingSubscription;
 use Nvl\Billing\Models\BillingSubscriptionItem;
 use Nvl\Support\Ownership\Contracts\OwnershipWriter;
 
-/** Persists Cashier children through their canonical native parent assignment. @internal */
+/**
+ * Persists Cashier children through their canonical native parent assignment.
+ *
+ * @internal
+ */
 final readonly class BillingRecordWriter
 {
     /** Retain only the neutral write boundary. */

@@ -12,7 +12,11 @@ use Nvl\Billing\Exceptions\BillingException;
 use Nvl\Billing\Models\BillingAccount;
 use Nvl\Support\Doctor\DoctorCheck;
 
-/** Checks the optional Billing package's deployment readiness. */
+/**
+ * Checks the optional Billing package's deployment readiness.
+ *
+ * @internal
+ */
 final class BillingDoctor
 {
     /** @return list<DoctorCheck> */

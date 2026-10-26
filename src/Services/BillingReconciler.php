@@ -13,7 +13,11 @@ use Nvl\Billing\Models\BillingSubscription;
 use Nvl\Support\Ownership\ValueObjects\OwnerReference;
 use TypeError;
 
-/** Repairs a owner's local Cashier state from Stripe's current objects. */
+/**
+ * Repairs a owner's local Cashier state from Stripe's current objects.
+ *
+ * @api
+ */
 final readonly class BillingReconciler
 {
     /** Inject the Stripe reader and Cashier synchronization adapter. */

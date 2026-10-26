@@ -7,7 +7,11 @@ namespace Nvl\Billing\Services;
 use Laravel\Cashier\Cashier;
 use Nvl\Billing\Contracts\SubscriptionReader;
 
-/** Pages through Stripe's authoritative subscriptions for reconciliation. */
+/**
+ * Pages through Stripe's authoritative subscriptions for reconciliation.
+ *
+ * @internal
+ */
 final class StripeSubscriptionReader implements SubscriptionReader
 {
     /** @return list<array<string, mixed>> */

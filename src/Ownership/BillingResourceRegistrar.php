@@ -12,7 +12,11 @@ use Nvl\Support\Ownership\Services\OwnershipResourceRegistry;
 use Nvl\Support\Ownership\ValueObjects\OwnershipDefinition;
 use Nvl\Support\Ownership\ValueObjects\OwnershipResourceDefinition;
 
-/** Declares one captured account with inherited Cashier state and independently durable provider receipts. @internal */
+/**
+ * Declares one captured account with inherited Cashier state and independently durable provider receipts.
+ *
+ * @internal
+ */
 final readonly class BillingResourceRegistrar
 {
     /** Register exact package-owned persistence independently from schema installation. */

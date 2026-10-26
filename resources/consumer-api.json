@@ -179,7 +179,6 @@
             "kind": "class",
             "file": "src/Models/BillingAccount.php",
             "methods": [
-                "bootHasOwnership",
                 "delete",
                 "fresh",
                 "getConnectionName",
@@ -216,7 +215,6 @@
             "file": "src/Models/BillingSubscription.php",
             "methods": [
                 "billingAccount",
-                "bootHasOwnership",
                 "delete",
                 "fresh",
                 "getConnectionName",
@@ -247,7 +245,6 @@
             "file": "src/Models/BillingSubscriptionItem.php",
             "methods": [
                 "billingSubscription",
-                "bootHasOwnership",
                 "delete",
                 "fresh",
                 "getConnectionName",
@@ -306,6 +303,26 @@
             "methods": [
                 "__construct",
                 "url"
+            ],
+            "properties": [],
+            "constants": []
+        },
+        "Nvl\\Billing\\Services\\BillingReconciler": {
+            "kind": "class",
+            "file": "src/Services/BillingReconciler.php",
+            "methods": [
+                "__construct",
+                "reconcile"
+            ],
+            "properties": [],
+            "constants": []
+        },
+        "Nvl\\Billing\\Services\\BillingWebhooks": {
+            "kind": "class",
+            "file": "src/Services/BillingWebhooks.php",
+            "methods": [
+                "__construct",
+                "process"
             ],
             "properties": [],
             "constants": []

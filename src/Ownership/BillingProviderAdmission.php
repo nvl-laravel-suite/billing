@@ -15,7 +15,11 @@ use Nvl\Support\Ownership\Services\OwnershipContextResolver;
 use Nvl\Support\Ownership\Services\OwnershipResourceRegistry;
 use Nvl\Support\Ownership\ValueObjects\OwnerReference;
 
-/** Resolves stored customer identity only after the webhook service verifies its signature. @internal */
+/**
+ * Resolves stored customer identity only after the webhook service verifies its signature.
+ *
+ * @internal
+ */
 final readonly class BillingProviderAdmission
 {
     /** Retain narrow identity, maintenance admission and package receipt boundaries. */

@@ -9,7 +9,11 @@ use Nvl\Billing\Contracts\BillingManagementAccess;
 use Nvl\Support\Exceptions\BindingRequiredException;
 use Nvl\Support\Ownership\ValueObjects\OwnerReference;
 
-/** Denies billing changes until the consumer binds its own permission rule. */
+/**
+ * Denies billing changes until the consumer binds its own permission rule.
+ *
+ * @internal
+ */
 final class DenyBillingManagementAccess implements BillingManagementAccess
 {
     /** Deny a management action without an installed host adapter. */

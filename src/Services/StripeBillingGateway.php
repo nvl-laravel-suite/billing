@@ -12,8 +12,12 @@ use Nvl\Billing\Enums\BillingResponseCode;
 use Nvl\Billing\Exceptions\BillingException;
 use Nvl\Billing\Models\BillingAccount;
 
-/** Calls Stripe for hosted sessions while Cashier owns local subscription sync.
+/**
+ * Calls Stripe for hosted sessions while Cashier owns local subscription sync.
+ *
  * @phpstan-import-type CheckoutSession from BillingGateway
+ *
+ * @internal
  */
 final class StripeBillingGateway implements BillingGateway
 {
