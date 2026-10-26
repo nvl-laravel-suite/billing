@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\DB;
 use Nvl\Billing\Definitions\Tables\BillingTables;
 use Nvl\Billing\Models\BillingAccount;
 use Nvl\Billing\Models\BillingSubscription;
+use Nvl\Billing\Services\BillingWebhooks;
 
 it('requires a signed webhook and applies each Stripe event once', function (): void {
     billingNativeRun(function () {
@@ -71,4 +72,11 @@ it('revokes subscription access when Stripe deletes the billing customer', funct
         $this->call('POST', '/nvl/billing/stripe/webhook', [], [], [], ['CONTENT_TYPE' => 'application/json', 'HTTP_Stripe_Signature' => "t={$timestamp},v1={$signature}"], $payload)->assertNoContent();
         expect($account->fresh()->stripe_id)->toBe('cus_deleted')->and($account->fresh()->provider_deleted_at)->not->toBeNull()->and($subscription->fresh()->stripe_status)->toBe('canceled')->and($subscription->fresh()->ends_at)->not->toBeNull();
     });
+});
+
+it('rejects an invalid webhook tolerance before verifying a provider payload', function (): void {
+    config(['cashier.webhook.secret' => 'whsec_billing_test', 'cashier.webhook.tolerance' => 'unsafe']);
+
+    expect(fn () => app(BillingWebhooks::class)->process('{}', 'signature'))
+        ->toThrow(InvalidArgumentException::class, 'tolerance');
 });

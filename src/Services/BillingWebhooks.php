@@ -30,7 +30,17 @@ final class BillingWebhooks
         if (! is_string($secret) || $secret === '') {
             throw new InvalidArgumentException('A Stripe webhook signing secret is required.');
         }
-        WebhookSignature::verifyHeader($payload, $signature, $secret, config('cashier.webhook.tolerance', 300));
+        $tolerance = config('cashier.webhook.tolerance', 300);
+        if ($tolerance !== null) {
+            if (! is_int($tolerance) && ! is_string($tolerance)) {
+                throw new InvalidArgumentException('Webhook tolerance must be a non-negative integer or null.');
+            }
+            $tolerance = filter_var($tolerance, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0]]);
+            if ($tolerance === false) {
+                throw new InvalidArgumentException('Webhook tolerance must be a non-negative integer or null.');
+            }
+        }
+        WebhookSignature::verifyHeader($payload, $signature, $secret, $tolerance);
         $payload = json_decode($payload, true, flags: JSON_THROW_ON_ERROR);
         if (! is_array($payload)
             || ! is_string($payload['id'] ?? null)
