@@ -6,130 +6,6 @@
         "Nvl\\Billing\\Database\\Factories\\": "database/factories"
     },
     "symbols": {
-        "Nvl\\Billing\\Actions\\StartCheckoutAction": {
-            "kind": "class",
-            "file": "src/Actions/StartCheckoutAction.php",
-            "methods": [
-                "__construct",
-                "execute"
-            ],
-            "properties": [],
-            "constants": []
-        },
-        "Nvl\\Billing\\Actions\\UpdateBillingContactAction": {
-            "kind": "class",
-            "file": "src/Actions/UpdateBillingContactAction.php",
-            "methods": [
-                "__construct",
-                "execute"
-            ],
-            "properties": [],
-            "constants": []
-        },
-        "Nvl\\Billing\\Compatibility\\Actions\\StartCheckoutAction": {
-            "kind": "class",
-            "file": "src/Compatibility/Actions/StartCheckoutAction.php",
-            "methods": [
-                "__construct",
-                "execute"
-            ],
-            "properties": [],
-            "constants": []
-        },
-        "Nvl\\Billing\\Compatibility\\Actions\\UpdateBillingContactAction": {
-            "kind": "class",
-            "file": "src/Compatibility/Actions/UpdateBillingContactAction.php",
-            "methods": [
-                "__construct",
-                "execute"
-            ],
-            "properties": [],
-            "constants": []
-        },
-        "Nvl\\Billing\\Compatibility\\Contracts\\BillingAccessContract": {
-            "kind": "interface",
-            "file": "src/Compatibility/Contracts/BillingAccessContract.php",
-            "methods": [
-                "forTenant"
-            ],
-            "properties": [],
-            "constants": []
-        },
-        "Nvl\\Billing\\Compatibility\\Contracts\\BillingManagementAccess": {
-            "kind": "interface",
-            "file": "src/Compatibility/Contracts/BillingManagementAccess.php",
-            "methods": [
-                "assertCanManage"
-            ],
-            "properties": [],
-            "constants": []
-        },
-        "Nvl\\Billing\\Compatibility\\Contracts\\BillingPortalContract": {
-            "kind": "interface",
-            "file": "src/Compatibility/Contracts/BillingPortalContract.php",
-            "methods": [
-                "url"
-            ],
-            "properties": [],
-            "constants": []
-        },
-        "Nvl\\Billing\\Compatibility\\Contracts\\StartCheckoutContract": {
-            "kind": "interface",
-            "file": "src/Compatibility/Contracts/StartCheckoutContract.php",
-            "methods": [
-                "execute"
-            ],
-            "properties": [],
-            "constants": []
-        },
-        "Nvl\\Billing\\Compatibility\\Contracts\\UpdateBillingContactContract": {
-            "kind": "interface",
-            "file": "src/Compatibility/Contracts/UpdateBillingContactContract.php",
-            "methods": [
-                "execute"
-            ],
-            "properties": [],
-            "constants": []
-        },
-        "Nvl\\Billing\\Compatibility\\Factories\\LegacyBillingAccountFactory": {
-            "kind": "trait",
-            "file": "src/Compatibility/Factories/LegacyBillingAccountFactory.php",
-            "methods": [
-                "forTenant"
-            ],
-            "properties": [],
-            "constants": []
-        },
-        "Nvl\\Billing\\Compatibility\\LegacyBillingServiceProvider": {
-            "kind": "class",
-            "file": "src/Compatibility/LegacyBillingServiceProvider.php",
-            "methods": [
-                "boot",
-                "register"
-            ],
-            "properties": [],
-            "constants": []
-        },
-        "Nvl\\Billing\\Compatibility\\Services\\BillingAccess": {
-            "kind": "class",
-            "file": "src/Compatibility/Services/BillingAccess.php",
-            "methods": [
-                "__construct",
-                "forTenant"
-            ],
-            "properties": [],
-            "constants": []
-        },
-        "Nvl\\Billing\\Compatibility\\Services\\BillingPortal": {
-            "kind": "class",
-            "file": "src/Compatibility/Services/BillingPortal.php",
-            "methods": [
-                "__construct",
-                "url"
-            ],
-            "properties": [],
-            "constants": []
-        },
         "Nvl\\Billing\\Contracts\\BillingAccessContract": {
             "kind": "interface",
             "file": "src/Contracts/BillingAccessContract.php",
@@ -168,15 +44,6 @@
             "properties": [],
             "constants": []
         },
-        "Nvl\\Billing\\Contracts\\StartCheckoutContract": {
-            "kind": "interface",
-            "file": "src/Contracts/StartCheckoutContract.php",
-            "methods": [
-                "execute"
-            ],
-            "properties": [],
-            "constants": []
-        },
         "Nvl\\Billing\\Contracts\\SubscriptionReader": {
             "kind": "interface",
             "file": "src/Contracts/SubscriptionReader.php",
@@ -186,22 +53,11 @@
             "properties": [],
             "constants": []
         },
-        "Nvl\\Billing\\Contracts\\UpdateBillingContactContract": {
-            "kind": "interface",
-            "file": "src/Contracts/UpdateBillingContactContract.php",
-            "methods": [
-                "execute"
-            ],
-            "properties": [],
-            "constants": []
-        },
         "Nvl\\Billing\\Database\\Factories\\BillingAccountFactory": {
             "kind": "class",
             "file": "database/factories/BillingAccountFactory.php",
             "methods": [
-                "configure",
-                "definition",
-                "forTenant"
+                "definition"
             ],
             "properties": [],
             "constants": []
@@ -252,8 +108,7 @@
                 "ReconciliationRequired",
                 "RefundBalanceExceeded",
                 "StorageUnavailable",
-                "SubscriptionConflict",
-                "TenantInactive"
+                "SubscriptionConflict"
             ]
         },
         "Nvl\\Billing\\Events\\BillingAccountChanged": {
@@ -324,53 +179,96 @@
             "kind": "class",
             "file": "src/Models/BillingAccount.php",
             "methods": [
-                "getKey",
-                "getKeyName",
-                "getMorphClass",
-                "getRouteKey",
-                "getRouteKeyName",
-                "is",
-                "isNot",
-                "relationLoaded"
+                "bootHasOwnership",
+                "delete",
+                "fresh",
+                "getConnectionName",
+                "getTable",
+                "newQueryForRestoration",
+                "ownershipDefinition",
+                "refresh",
+                "refreshForUpdate",
+                "save"
             ],
-            "properties": [],
-            "constants": []
+            "properties": [
+                "email",
+                "id",
+                "name",
+                "owner_reference",
+                "owner_scope_key",
+                "pending_checkout_attempt_id",
+                "pending_checkout_expires_at",
+                "pending_checkout_price",
+                "pending_checkout_session_id",
+                "pending_checkout_trial_days",
+                "pending_checkout_url",
+                "provider_deleted_at",
+                "stripe_id",
+                "tenant_id",
+                "trial_consumed_at"
+            ],
+            "constants": [
+                "TABLE"
+            ]
         },
         "Nvl\\Billing\\Models\\BillingSubscription": {
             "kind": "class",
             "file": "src/Models/BillingSubscription.php",
             "methods": [
-                "getKey",
-                "getKeyName",
-                "getMorphClass",
-                "getRouteKey",
-                "getRouteKeyName",
-                "is",
-                "isNot",
-                "relationLoaded"
+                "billingAccount",
+                "bootHasOwnership",
+                "delete",
+                "fresh",
+                "getConnectionName",
+                "getTable",
+                "newQueryForRestoration",
+                "ownershipDefinition",
+                "refresh",
+                "refreshForUpdate",
+                "save"
             ],
             "properties": [
-                "id"
+                "billing_account_id",
+                "created_at",
+                "ends_at",
+                "id",
+                "quantity",
+                "stripe_id",
+                "stripe_price",
+                "stripe_status",
+                "type"
             ],
-            "constants": []
+            "constants": [
+                "TABLE"
+            ]
         },
         "Nvl\\Billing\\Models\\BillingSubscriptionItem": {
             "kind": "class",
             "file": "src/Models/BillingSubscriptionItem.php",
             "methods": [
-                "getKey",
-                "getKeyName",
-                "getMorphClass",
-                "getRouteKey",
-                "getRouteKeyName",
-                "is",
-                "isNot",
-                "relationLoaded"
+                "billingSubscription",
+                "bootHasOwnership",
+                "delete",
+                "fresh",
+                "getConnectionName",
+                "getTable",
+                "newQueryForRestoration",
+                "ownershipDefinition",
+                "refresh",
+                "refreshForUpdate",
+                "save"
             ],
             "properties": [
-                "id"
+                "billing_subscription_id",
+                "id",
+                "quantity",
+                "stripe_id",
+                "stripe_price",
+                "stripe_product"
             ],
-            "constants": []
+            "constants": [
+                "TABLE"
+            ]
         },
         "Nvl\\Billing\\Services\\BillingAccess": {
             "kind": "class",
@@ -378,6 +276,26 @@
             "methods": [
                 "__construct",
                 "forOwner"
+            ],
+            "properties": [],
+            "constants": []
+        },
+        "Nvl\\Billing\\Services\\BillingCheckout": {
+            "kind": "class",
+            "file": "src/Services/BillingCheckout.php",
+            "methods": [
+                "__construct",
+                "start"
+            ],
+            "properties": [],
+            "constants": []
+        },
+        "Nvl\\Billing\\Services\\BillingContacts": {
+            "kind": "class",
+            "file": "src/Services/BillingContacts.php",
+            "methods": [
+                "__construct",
+                "update"
             ],
             "properties": [],
             "constants": []
@@ -421,88 +339,6 @@
             ],
             "properties": [],
             "constants": []
-        },
-        "Nvl\\Billing\\ValueObjects\\BillingSnapshot": {
-            "kind": "class",
-            "file": "src/ValueObjects/BillingSnapshot.php",
-            "methods": [
-                "__construct",
-                "allows",
-                "limit"
-            ],
-            "properties": [
-                "plan",
-                "state"
-            ],
-            "constants": []
-        },
-        "Nvl\\Billing\\ValueObjects\\CheckoutSession": {
-            "kind": "class",
-            "file": "src/ValueObjects/CheckoutSession.php",
-            "methods": [
-                "__construct"
-            ],
-            "properties": [
-                "expiresAt",
-                "id",
-                "url"
-            ],
-            "constants": []
         }
-    },
-    "models": {
-        "Nvl\\Billing\\Models\\BillingAccount": {
-            "read": [],
-            "identity_methods": [
-                "getKey",
-                "getKeyName",
-                "getMorphClass",
-                "getRouteKey",
-                "getRouteKeyName",
-                "is",
-                "isNot",
-                "relationLoaded"
-            ],
-            "capability_relations": []
-        },
-        "Nvl\\Billing\\Models\\BillingSubscription": {
-            "read": [
-                "id"
-            ],
-            "identity_methods": [
-                "getKey",
-                "getKeyName",
-                "getMorphClass",
-                "getRouteKey",
-                "getRouteKeyName",
-                "is",
-                "isNot",
-                "relationLoaded"
-            ],
-            "capability_relations": []
-        },
-        "Nvl\\Billing\\Models\\BillingSubscriptionItem": {
-            "read": [
-                "id"
-            ],
-            "identity_methods": [
-                "getKey",
-                "getKeyName",
-                "getMorphClass",
-                "getRouteKey",
-                "getRouteKeyName",
-                "is",
-                "isNot",
-                "relationLoaded"
-            ],
-            "capability_relations": []
-        }
-    },
-    "capability_relations": {},
-    "tables": {
-        "accounts": "nvl_billing_accounts",
-        "subscription_items": "nvl_billing_subscription_items",
-        "subscriptions": "nvl_billing_subscriptions",
-        "webhook_events": "nvl_billing_webhook_events"
     }
 }
