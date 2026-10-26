@@ -25,7 +25,7 @@ it('revokes access on provider deletion while preserving the immutable historica
         BillingAccount::query()->forceCreate(['email' => 'billing@example.test', 'stripe_id' => 'cus_deleted']);
         app(BillingSubscriptionSyncer::class)->sync(['id' => 'sub_deleted', 'customer' => 'cus_deleted', 'status' => 'active',
             'items' => ['data' => [['id' => 'si_deleted', 'price' => ['id' => 'price_pro', 'product' => 'prod_native'], 'quantity' => 1]]]]);
-        expect(app(BillingAccess::class)->forOwner(app(OwnershipContext::class)->requireOwner())->allows('reports'))->toBeTrue();
+        expect(app(BillingAccess::class)->forOwner(app(OwnershipContext::class)->requireOwner())['features'])->toContain('reports');
     });
     $body = json_encode(['id' => 'evt_delete', 'type' => 'customer.deleted', 'data' => ['object' => ['id' => 'cus_deleted']]], JSON_THROW_ON_ERROR);
     $stamp = time();
@@ -36,6 +36,6 @@ it('revokes access on provider deletion while preserving the immutable historica
     app(OwnershipRunner::class)->run(Company::query()->findOrFail(7), Actor::query()->findOrFail(1), function (): void {
         expect(BillingAccount::query()->sole()->stripe_id)->toBe('cus_deleted')
             ->and(BillingAccount::query()->sole()->provider_deleted_at)->not->toBeNull()
-            ->and(app(BillingAccess::class)->forOwner(app(OwnershipContext::class)->requireOwner())->allows('reports'))->toBeFalse();
+            ->and(app(BillingAccess::class)->forOwner(app(OwnershipContext::class)->requireOwner())['features'])->not->toContain('reports');
     });
 });

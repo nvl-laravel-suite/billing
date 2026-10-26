@@ -11,11 +11,12 @@ use Nvl\Billing\Exceptions\BillingException;
 use Nvl\Billing\Models\BillingAccount;
 use Nvl\Billing\Models\BillingSubscription;
 use Nvl\Billing\Models\BillingSubscriptionItem;
-use Nvl\Billing\ValueObjects\BillingSnapshot;
 use Nvl\Support\Ownership\ValueObjects\OwnerReference;
 
 /**
  * Resolves tenant features and limits from Cashier's synchronized state.
+ *
+ * @phpstan-import-type BillingAccessState from BillingAccessContract
  *
  * @api
  */
@@ -24,8 +25,10 @@ final readonly class BillingAccess implements BillingAccessContract
     /** Create the read-only access resolver with the configured Price catalog. */
     public function __construct(private PlanCatalog $catalog, private BillingOwnerBoundary $ownership) {}
 
-    /** Return one owner's effective access without using ambient tenant context. */
-    public function forOwner(OwnerReference $owner): BillingSnapshot
+    /** Return one owner's effective access.
+     * @return BillingAccessState
+     */
+    public function forOwner(OwnerReference $owner): array
     {
         if (config('nvl-billing.enabled') !== true) {
             return $this->snapshot(null, 'disabled');
@@ -81,8 +84,10 @@ final readonly class BillingAccess implements BillingAccessContract
         return $this->snapshot($plan, $state);
     }
 
-    /** Create a snapshot from one configured plan's feature policy. */
-    private function snapshot(?string $plan, string $state): BillingSnapshot
+    /** Resolve one configured plan's feature policy.
+     * @return BillingAccessState
+     */
+    private function snapshot(?string $plan, string $state): array
     {
         $path = $plan === null ? 'nvl-billing.access.free' : "nvl-billing.access.plans.{$plan}";
         $policy = config($path, []);
@@ -95,6 +100,6 @@ final readonly class BillingAccess implements BillingAccessContract
         /** @var array<string, int> $limits */
         $limits = $policy['limits'] ?? [];
 
-        return new BillingSnapshot($plan, $state, $features, $limits);
+        return ['plan' => $plan, 'state' => $state, 'features' => $features, 'limits' => $limits];
     }
 }

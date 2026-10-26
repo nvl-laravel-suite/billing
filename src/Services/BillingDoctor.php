@@ -24,8 +24,6 @@ final class BillingDoctor
                 : 'Cashier models remain host-owned.'),
             new DoctorCheck('adoption.cashier_routes', 'info', true, config('nvl-billing.adoption.cashier_routes') === true
                 ? 'Explicit adoption suppresses native Cashier routes.' : 'Native Cashier routes remain host-owned.'),
-            new DoctorCheck('routes.webhook', 'info', true, config('nvl-billing.routes.webhook.enabled') === true
-                ? 'NVL Billing webhook ingress is enabled.' : 'NVL Billing webhook ingress is disabled.'),
         ];
     }
 

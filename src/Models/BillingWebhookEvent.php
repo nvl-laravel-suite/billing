@@ -6,9 +6,9 @@ namespace Nvl\Billing\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Nvl\Billing\Definitions\Tables\BillingTables;
-use Nvl\Billing\Models\Concerns\HasBillingOwnership;
 use Nvl\Billing\Models\Concerns\UsesBillingConnection;
 use Nvl\Support\Ownership\Contracts\Ownable;
+use Nvl\Support\Ownership\Traits\HasOwnership;
 
 /**
  * Preserves a verified provider receipt without retaining remote payload content.
@@ -23,7 +23,7 @@ use Nvl\Support\Ownership\Contracts\Ownable;
  */
 final class BillingWebhookEvent extends Model implements Ownable
 {
-    use HasBillingOwnership;
+    use HasOwnership;
     use UsesBillingConnection;
 
     protected $primaryKey = 'stripe_event_id';

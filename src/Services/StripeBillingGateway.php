@@ -11,12 +11,15 @@ use Nvl\Billing\Contracts\BillingGateway;
 use Nvl\Billing\Enums\BillingResponseCode;
 use Nvl\Billing\Exceptions\BillingException;
 use Nvl\Billing\Models\BillingAccount;
-use Nvl\Billing\ValueObjects\CheckoutSession;
 
-/** Calls Stripe for hosted sessions while Cashier owns local subscription sync. */
+/** Calls Stripe for hosted sessions while Cashier owns local subscription sync.
+ * @phpstan-import-type CheckoutSession from BillingGateway
+ */
 final class StripeBillingGateway implements BillingGateway
 {
-    /** Create one hosted Checkout with idempotent customer and session requests. */
+    /** Create one hosted Checkout with idempotent customer and session requests.
+     * @return CheckoutSession
+     */
     public function checkout(
         BillingAccount $account,
         string $price,
@@ -25,7 +28,7 @@ final class StripeBillingGateway implements BillingGateway
         string $cancelUrl,
         CarbonImmutable $expiresAt,
         string $attemptId,
-    ): CheckoutSession {
+    ): array {
         if ($account->provider_deleted_at !== null) {
             throw BillingException::because(BillingResponseCode::SubscriptionConflict, 'The historical billing customer was deleted by its provider.');
         }
@@ -75,7 +78,7 @@ final class StripeBillingGateway implements BillingGateway
             throw BillingException::because(BillingResponseCode::ProviderPayloadInvalid, 'Stripe did not return a hosted Checkout session.');
         }
 
-        return new CheckoutSession($session->id, $session->url, $expiresAt);
+        return ['id' => $session->id, 'url' => $session->url, 'expiresAt' => $expiresAt];
     }
 
     /** Create one hosted portal session for the tenant's Stripe customer. */

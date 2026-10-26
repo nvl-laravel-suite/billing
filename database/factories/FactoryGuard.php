@@ -7,8 +7,6 @@ namespace Nvl\Billing\Database\Factories;
 use Illuminate\Container\Container;
 use Illuminate\Database\Eloquent\Model;
 use InvalidArgumentException;
-use Nvl\Billing\Compatibility\Factories\LegacyBillingFactoryGuard;
-use Nvl\Billing\Compatibility\LegacyBillingModelScope;
 use Nvl\Support\Ownership\Contracts\OwnershipBoundary;
 use Nvl\Support\Ownership\Services\OwnershipResourceRegistry;
 
@@ -28,11 +26,6 @@ final readonly class FactoryGuard
     /** Require an unchanged actual parent in the admitted source and owner. */
     public static function parent(Model $parent, Model $child): void
     {
-        if (LegacyBillingModelScope::permitsLegacy($parent)) {
-            LegacyBillingFactoryGuard::parent($parent, $child);
-
-            return;
-        }
         if ($parent->getConnection() !== $child->getConnection()) {
             throw new InvalidArgumentException('Billing factories require their actual parent source.');
         }

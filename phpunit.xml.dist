@@ -10,8 +10,9 @@
          beStrictAboutOutputDuringTests="true"
          cacheDirectory=".temp/phpunit">
     <testsuites>
-        <testsuite name="NVL Tenancy">
+        <testsuite name="NVL Billing">
             <directory>tests</directory>
+            <exclude>tests/Historical</exclude>
         </testsuite>
     </testsuites>
     <php>

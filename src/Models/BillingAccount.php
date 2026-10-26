@@ -12,10 +12,10 @@ use Illuminate\Support\Carbon;
 use Laravel\Cashier\Billable;
 use Nvl\Billing\Database\Factories\BillingAccountFactory;
 use Nvl\Billing\Definitions\Tables\BillingTables;
-use Nvl\Billing\Models\Concerns\HasBillingOwnership;
 use Nvl\Billing\Models\Concerns\UsesBillingConnection;
 use Nvl\Support\Config\PackageStorage;
 use Nvl\Support\Ownership\Contracts\Ownable;
+use Nvl\Support\Ownership\Traits\HasOwnership;
 
 /**
  * Represents one tenant's Stripe customer without coupling billing to a user.
@@ -41,11 +41,11 @@ use Nvl\Support\Ownership\Contracts\Ownable;
 final class BillingAccount extends Model implements Ownable
 {
     use Billable;
-    use HasBillingOwnership;
 
     /** @use HasFactory<BillingAccountFactory> */
     use HasFactory;
 
+    use HasOwnership;
     use HasUuids;
     use UsesBillingConnection;
 

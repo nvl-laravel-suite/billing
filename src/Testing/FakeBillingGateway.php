@@ -8,7 +8,6 @@ use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Container\Container;
 use Nvl\Billing\Contracts\BillingGateway;
 use Nvl\Billing\Models\BillingAccount;
-use Nvl\Billing\ValueObjects\CheckoutSession;
 use Nvl\Support\Testing\FakeCalls;
 use TypeError;
 
@@ -16,6 +15,8 @@ use TypeError;
  * Supplies explicit subscription gateway responses without Stripe or account persistence.
  *
  * @api
+ *
+ * @phpstan-import-type CheckoutSession from BillingGateway
  */
 final class FakeBillingGateway implements BillingGateway
 {
@@ -32,7 +33,9 @@ final class FakeBillingGateway implements BillingGateway
         return $fake;
     }
 
-    /** Start or recover one scripted idempotent Checkout attempt. */
+    /** Start or recover one scripted idempotent Checkout attempt.
+     * @return CheckoutSession
+     */
     public function checkout(
         BillingAccount $account,
         string $price,
@@ -41,7 +44,7 @@ final class FakeBillingGateway implements BillingGateway
         string $cancelUrl,
         CarbonImmutable $expiresAt,
         string $attemptId,
-    ): CheckoutSession {
+    ): array {
         $result = $this->invoke('checkout', [
             'account' => $account,
             'price' => $price,
@@ -52,8 +55,8 @@ final class FakeBillingGateway implements BillingGateway
             'attemptId' => $attemptId,
         ]);
 
-        if (! $result instanceof CheckoutSession) {
-            throw new TypeError('FakeBillingGateway::checkout requires a scripted CheckoutSession.');
+        if (! is_array($result) || ! is_string($result['id'] ?? null) || ! is_string($result['url'] ?? null) || ! ($result['expiresAt'] ?? null) instanceof CarbonImmutable) {
+            throw new TypeError('FakeBillingGateway::checkout requires a scripted native session array.');
         }
 
         return $result;

@@ -6,8 +6,6 @@ namespace Nvl\Billing\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Laravel\Cashier\Cashier;
-use Nvl\Billing\Actions\StartCheckoutAction;
-use Nvl\Billing\Actions\UpdateBillingContactAction;
 use Nvl\Billing\Catalog\PlanCatalog;
 use Nvl\Billing\Console\Commands\BillingDoctorCommand;
 use Nvl\Billing\Console\Commands\BillingReconcileCommand;
@@ -15,9 +13,7 @@ use Nvl\Billing\Contracts\BillingAccessContract;
 use Nvl\Billing\Contracts\BillingGateway;
 use Nvl\Billing\Contracts\BillingManagementAccess;
 use Nvl\Billing\Contracts\BillingPortalContract;
-use Nvl\Billing\Contracts\StartCheckoutContract;
 use Nvl\Billing\Contracts\SubscriptionReader;
-use Nvl\Billing\Contracts\UpdateBillingContactContract;
 use Nvl\Billing\Enums\BillingResponseCode;
 use Nvl\Billing\Exceptions\BillingException;
 use Nvl\Billing\Models\BillingAccount;
@@ -75,8 +71,6 @@ final class BillingServiceProvider extends ServiceProvider implements OwnershipI
         $this->app->bindIf(BillingManagementAccess::class, DenyBillingManagementAccess::class);
         $this->app->bindIf(BillingGateway::class, StripeBillingGateway::class);
         $this->app->bindIf(SubscriptionReader::class, StripeSubscriptionReader::class);
-        $this->app->bindIf(StartCheckoutContract::class, StartCheckoutAction::class);
-        $this->app->bindIf(UpdateBillingContactContract::class, UpdateBillingContactAction::class);
         $this->app->bindIf(BillingAccessContract::class, BillingAccess::class);
         $this->app->bindIf(BillingPortalContract::class, BillingPortal::class);
         $this->callAfterResolving(RequiredBindings::class, static function (RequiredBindings $bindings): void {
@@ -103,9 +97,6 @@ final class BillingServiceProvider extends ServiceProvider implements OwnershipI
                 Cashier::useCustomerModel(BillingAccount::class);
                 Cashier::useSubscriptionModel(BillingSubscription::class);
                 Cashier::useSubscriptionItemModel(BillingSubscriptionItem::class);
-            }
-            if (config('nvl-billing.routes.webhook.enabled') === true) {
-                $this->loadRoutesFrom(__DIR__.'/../../routes/web.php');
             }
         }
 

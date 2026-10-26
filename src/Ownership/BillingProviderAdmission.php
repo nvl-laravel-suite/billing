@@ -14,9 +14,8 @@ use Nvl\Support\Ownership\Exceptions\OwnershipViolation;
 use Nvl\Support\Ownership\Services\OwnershipContextResolver;
 use Nvl\Support\Ownership\Services\OwnershipResourceRegistry;
 use Nvl\Support\Ownership\ValueObjects\OwnerReference;
-use Symfony\Component\HttpFoundation\Response;
 
-/** Resolves stored customer identity only after the webhook route verifies its signature. @internal */
+/** Resolves stored customer identity only after the webhook service verifies its signature. @internal */
 final readonly class BillingProviderAdmission
 {
     /** Retain narrow identity, maintenance admission and package receipt boundaries. */
@@ -28,12 +27,14 @@ final readonly class BillingProviderAdmission
      * Apply verified provider facts in the stored customer's owner partition.
      *
      * @param  array<string,mixed>  $payload
-     * @param  Closure(): Response  $apply
+     * @param  Closure(): void  $apply
      */
-    public function run(array $payload, Closure $apply): Response
+    public function run(array $payload, Closure $apply): void
     {
         if (! $this->native()) {
-            return $apply();
+            $apply();
+
+            return;
         }
         $this->integrity->assertReady();
         $type = $payload['type'] ?? null;
@@ -42,7 +43,7 @@ final readonly class BillingProviderAdmission
         if (! is_array($object) || ! is_string($type) || ! in_array($type, [
             'customer.subscription.created', 'customer.subscription.updated', 'customer.subscription.deleted', 'customer.updated', 'customer.deleted',
         ], true)) {
-            return new Response('', Response::HTTP_NO_CONTENT);
+            return;
         }
         $customer = str_starts_with($type, 'customer.subscription.') ? ($object['customer'] ?? null) : ($object['id'] ?? null);
         if (! is_string($customer) || $customer === '') {
@@ -52,7 +53,7 @@ final readonly class BillingProviderAdmission
         $row = $model->getConnection()->table($model->getTable())->useWritePdo()->where('stripe_id', $customer)
             ->first(['owner_scope_key', 'owner_reference']);
         if ($row === null) {
-            return new Response('', Response::HTTP_NO_CONTENT);
+            return;
         }
         if (! is_string($row->owner_reference)) {
             throw new OwnershipViolation;
@@ -62,7 +63,7 @@ final readonly class BillingProviderAdmission
             throw new OwnershipViolation;
         }
 
-        return $this->runner->runSystem($owner, 'billing.provider-callback', $apply);
+        $this->runner->runSystem($owner, 'billing.provider-callback', $apply);
     }
 
     /**

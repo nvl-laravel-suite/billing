@@ -2,21 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Nvl\Billing\Http\Controllers;
+namespace Nvl\Billing\Services;
 
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
 use Nvl\Billing\Definitions\Tables\BillingTables;
 use Nvl\Billing\Models\BillingAccount;
 use Nvl\Billing\Ownership\BillingProviderAdmission;
-use Nvl\Billing\Services\BillingAccountStateUpdater;
-use Nvl\Billing\Services\BillingCustomerSyncer;
-use Nvl\Billing\Services\BillingSubscriptionSyncer;
 use Nvl\Support\Config\PackageStorage;
-use Symfony\Component\HttpFoundation\Response;
+use Stripe\WebhookSignature;
 
 /** Verifies, deduplicates, and synchronizes tenant Stripe billing events. */
-final class BillingWebhookController
+final class BillingWebhooks
 {
     /** Inject subscription and account synchronization boundaries. */
     public function __construct(
@@ -27,9 +24,14 @@ final class BillingWebhookController
     ) {}
 
     /** Apply one signed Stripe event through Cashier and record its side effects. */
-    public function handleWebhook(Request $request): Response
+    public function process(string $payload, string $signature): void
     {
-        $payload = json_decode($request->getContent(), true);
+        $secret = config('cashier.webhook.secret');
+        if (! is_string($secret) || $secret === '') {
+            throw new InvalidArgumentException('A Stripe webhook signing secret is required.');
+        }
+        WebhookSignature::verifyHeader($payload, $signature, $secret, config('cashier.webhook.tolerance', 300));
+        $payload = json_decode($payload, true, flags: JSON_THROW_ON_ERROR);
         if (! is_array($payload)
             || ! is_string($payload['id'] ?? null)
             || ! str_starts_with($payload['id'], 'evt_') || strlen($payload['id']) > 255
@@ -37,21 +39,21 @@ final class BillingWebhookController
             || ! is_array($payload['data'] ?? null) || ! is_array($payload['data']['object'] ?? null)
             || ! is_string($payload['data']['object']['id'] ?? null)
             || $payload['data']['object']['id'] === '' || strlen($payload['data']['object']['id']) > 255) {
-            return response()->json(['message' => 'Invalid Stripe event.'], 400);
+            throw new InvalidArgumentException('Invalid Stripe event.');
         }
         $eventPayload = [];
         foreach ($payload as $key => $value) {
             if (! is_string($key)) {
-                return response()->json(['message' => 'Invalid Stripe event keys.'], 400);
+                throw new InvalidArgumentException('Invalid Stripe event keys.');
             }
             $eventPayload[$key] = $value;
         }
         $connection = PackageStorage::connection('billing');
 
-        return $this->ownership->run($eventPayload, fn (): Response => DB::connection($connection)->transaction(function () use ($payload, $connection, $eventPayload): Response {
+        $this->ownership->run($eventPayload, fn () => DB::connection($connection)->transaction(function () use ($payload, $connection, $eventPayload): void {
             $attributes = $this->ownership->receipt($payload['id'], $payload['type']);
             if ($attributes === null) {
-                return response()->noContent();
+                return;
             }
             $inserted = DB::connection($connection)
                 ->table(BillingTables::get(BillingTables::WebhookEvents))
@@ -63,12 +65,11 @@ final class BillingWebhookController
                 ]);
 
             if ($inserted === 0) {
-                return response()->noContent();
+                return;
             }
 
             $this->applyEvent($eventPayload);
 
-            return response()->noContent();
         }));
     }
 

@@ -11,10 +11,10 @@ use Illuminate\Support\Carbon;
 use Laravel\Cashier\Subscription;
 use Nvl\Billing\Database\Factories\BillingSubscriptionFactory;
 use Nvl\Billing\Definitions\Tables\BillingTables;
-use Nvl\Billing\Models\Concerns\HasBillingOwnership;
 use Nvl\Billing\Models\Concerns\UsesBillingConnection;
 use Nvl\Support\Config\PackageStorage;
 use Nvl\Support\Ownership\Contracts\Ownable;
+use Nvl\Support\Ownership\Traits\HasOwnership;
 
 /**
  * Stores Cashier subscription state under Billing's own table name.
@@ -35,11 +35,10 @@ use Nvl\Support\Ownership\Contracts\Ownable;
  */
 final class BillingSubscription extends Subscription implements Ownable
 {
-    use HasBillingOwnership;
-
     /** @use HasFactory<BillingSubscriptionFactory> */
     use HasFactory;
 
+    use HasOwnership;
     use HasUuids;
     use UsesBillingConnection;
 

@@ -51,7 +51,7 @@ it('resolves signed provider events only through the stored customer owner and p
     $this->call('POST', '/nvl/billing/stripe/webhook', [], [], [], $headers, $body)->assertSuccessful();
     expect(DB::table(BillingTables::get(BillingTables::WebhookEvents))->count())->toBe(1);
     app(OwnershipRunner::class)->run(Company::query()->findOrFail(7), Actor::query()->findOrFail(1), function (): void {
-        expect(app(BillingAccess::class)->forOwner(app(OwnershipContext::class)->requireOwner())->allows('reports'))->toBeTrue()
+        expect(app(BillingAccess::class)->forOwner(app(OwnershipContext::class)->requireOwner())['features'])->toContain('reports')
             ->and(BillingSubscription::query()->sole()->stripe_id)->toBe('sub_native');
         $account = BillingAccount::query()->sole();
         expect(fn () => DB::table($account->getTable())->where('id', $account->id)->update(['stripe_id' => 'cus_replacement']))->toThrow(QueryException::class);

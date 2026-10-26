@@ -2,18 +2,15 @@
 
 declare(strict_types=1);
 
-namespace Nvl\Billing\Actions;
+namespace Nvl\Billing\Services;
 
 use Illuminate\Contracts\Auth\Authenticatable;
 use InvalidArgumentException;
 use Nvl\Billing\Contracts\BillingGateway;
 use Nvl\Billing\Contracts\BillingManagementAccess;
-use Nvl\Billing\Contracts\UpdateBillingContactContract;
 use Nvl\Billing\Enums\BillingResponseCode;
 use Nvl\Billing\Exceptions\BillingException;
 use Nvl\Billing\Models\BillingAccount;
-use Nvl\Billing\Services\BillingEvents;
-use Nvl\Billing\Services\BillingOwnerBoundary;
 use Nvl\Support\Ownership\ValueObjects\OwnerReference;
 
 /**
@@ -21,7 +18,7 @@ use Nvl\Support\Ownership\ValueObjects\OwnerReference;
  *
  * @api
  */
-final readonly class UpdateBillingContactAction implements UpdateBillingContactContract
+final readonly class BillingContacts
 {
     /** Inject tenant, authorization, and Stripe boundaries. */
     public function __construct(
@@ -32,7 +29,7 @@ final readonly class UpdateBillingContactAction implements UpdateBillingContactC
     ) {}
 
     /** Change the contact only after the host authorizes this owner. */
-    public function execute(OwnerReference $owner, Authenticatable $actor, string $name, string $email): BillingAccount
+    public function update(OwnerReference $owner, Authenticatable $actor, string $name, string $email): BillingAccount
     {
         if (config('nvl-billing.enabled') !== true) {
             throw BillingException::because(BillingResponseCode::FeatureDisabled, 'Billing is disabled.');

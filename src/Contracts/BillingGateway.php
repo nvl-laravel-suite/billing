@@ -6,16 +6,19 @@ namespace Nvl\Billing\Contracts;
 
 use Carbon\CarbonImmutable;
 use Nvl\Billing\Models\BillingAccount;
-use Nvl\Billing\ValueObjects\CheckoutSession;
 
 /**
  * Creates Stripe-hosted sessions behind a testable billing boundary.
+ *
+ * @phpstan-type CheckoutSession array{id: string, url: string, expiresAt: CarbonImmutable}
  *
  * @api
  */
 interface BillingGateway
 {
-    /** Start or recover one idempotent Checkout attempt. */
+    /** Start or recover one idempotent Checkout attempt.
+     * @return CheckoutSession
+     */
     public function checkout(
         BillingAccount $account,
         string $price,
@@ -24,7 +27,7 @@ interface BillingGateway
         string $cancelUrl,
         CarbonImmutable $expiresAt,
         string $attemptId,
-    ): CheckoutSession;
+    ): array;
 
     /** Return a short-lived Customer Portal URL for an existing customer. */
     public function portal(BillingAccount $account, string $returnUrl): string;

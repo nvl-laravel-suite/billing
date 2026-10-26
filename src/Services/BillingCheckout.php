@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Nvl\Billing\Compatibility\Actions;
+namespace Nvl\Billing\Services;
 
 use Carbon\CarbonImmutable;
 use DomainException;
@@ -12,30 +12,26 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 use Nvl\Billing\Catalog\PlanCatalog;
-use Nvl\Billing\Compatibility\Contracts\BillingManagementAccess;
-use Nvl\Billing\Compatibility\Contracts\StartCheckoutContract;
 use Nvl\Billing\Contracts\BillingGateway;
+use Nvl\Billing\Contracts\BillingManagementAccess;
 use Nvl\Billing\Enums\BillingResponseCode;
 use Nvl\Billing\Exceptions\BillingException;
 use Nvl\Billing\Models\BillingAccount;
 use Nvl\Billing\Models\BillingSubscription;
-use Nvl\Billing\Services\BillingEvents;
-use Nvl\Billing\ValueObjects\CheckoutAttempt;
-use Nvl\Billing\ValueObjects\CheckoutSession;
-use Nvl\Support\Tenancy\Contracts\TenantDirectory;
-use Nvl\Support\Tenancy\Enums\TenantStatus;
-use Nvl\Support\Tenancy\ValueObjects\TenantId;
+use Nvl\Support\Ownership\ValueObjects\OwnerReference;
 
 /**
- * Starts one tenant's hosted subscription Checkout without duplicate sessions.
+ * Starts one owner's hosted subscription Checkout without duplicate sessions.
  *
  * @api
+ *
+ * @phpstan-import-type CheckoutSession from BillingGateway
  */
-final readonly class StartCheckoutAction implements StartCheckoutContract
+final readonly class BillingCheckout
 {
     /** Inject the tenant, permission, catalog, and Stripe boundaries. */
     public function __construct(
-        private TenantDirectory $tenants,
+        private BillingOwnerBoundary $ownership,
         private BillingManagementAccess $management,
         private PlanCatalog $catalog,
         private BillingGateway $gateway,
@@ -43,63 +39,63 @@ final readonly class StartCheckoutAction implements StartCheckoutContract
     ) {}
 
     /**
-     * Start or return the existing Checkout for one tenant and Price.
+     * Start or return the existing Checkout for one owner and Price.
+     *
+     * @return CheckoutSession
      *
      * @throws DomainException When the tenant has a subscription or a different pending Price
      * @throws InvalidArgumentException When checkout input is invalid
      */
-    public function execute(
-        TenantId $tenant,
+    public function start(
+        OwnerReference $owner,
         Authenticatable $actor,
         string $billingEmail,
         string $plan,
         string $interval,
         string $successUrl,
         string $cancelUrl,
-    ): CheckoutSession {
+    ): array {
         if (config('nvl-billing.enabled') !== true) {
             throw BillingException::because(BillingResponseCode::FeatureDisabled, 'Billing is disabled.');
         }
 
-        $this->management->assertCanManage($actor, $tenant);
-        if ($this->tenants->find($tenant)->status !== TenantStatus::Active) {
-            throw BillingException::because(BillingResponseCode::TenantInactive, 'Only active tenants may start billing.');
-        }
+        $this->management->assertCanManage($actor, $owner);
+        $this->ownership->assertActor($owner, $actor);
 
         if (filter_var($billingEmail, FILTER_VALIDATE_EMAIL) === false) {
             throw new InvalidArgumentException('A valid billing email is required.');
         }
 
         $price = $this->catalog->priceFor($plan, $interval);
-        $account = $this->accountFor($tenant, $billingEmail);
+        $account = $this->accountFor($owner, $billingEmail);
         $attempt = DB::connection($account->getConnectionName())->transaction(
-            fn (): CheckoutAttempt => $this->reserveAttempt($account, $price),
+            fn (): array => $this->reserveAttempt($account, $price),
         );
 
-        if ($attempt->session !== null) {
-            return $attempt->session;
+        if ($attempt['session'] !== null) {
+            return $attempt['session'];
         }
 
         $session = $this->gateway->checkout(
-            $attempt->account,
+            $attempt['account'],
             $price,
-            $attempt->trialDays,
+            $attempt['trialDays'],
             $successUrl,
             $cancelUrl,
-            $attempt->expiresAt,
-            $attempt->id,
+            $attempt['expiresAt'],
+            $attempt['id'],
         );
 
         $account->getConnection()->transaction(function () use ($account, $attempt, $session): void {
             $updated = BillingAccount::query()->whereKey($account->id)
-                ->where('pending_checkout_attempt_id', $attempt->id)
+                ->where('pending_checkout_attempt_id', $attempt['id'])
                 ->whereNull('pending_checkout_session_id')
                 ->update([
-                    'pending_checkout_session_id' => $session->id,
-                    'pending_checkout_url' => $session->url,
+                    'pending_checkout_session_id' => $session['id'],
+                    'pending_checkout_url' => $session['url'],
                 ]);
             if ($updated === 1) {
-                ($this->events ?? BillingEvents::current())->checkoutStarted($account, $attempt->id, $session->id);
+                ($this->events ?? BillingEvents::current())->checkoutStarted($account, $attempt['id'], $session['id']);
             }
         });
 
@@ -107,11 +103,11 @@ final readonly class StartCheckoutAction implements StartCheckoutContract
     }
 
     /** Create the unique tenant account, recovering a competing insert. */
-    private function accountFor(TenantId $tenant, string $email): BillingAccount
+    private function accountFor(OwnerReference $owner, string $email): BillingAccount
     {
         try {
-            return (new BillingAccount)->getConnection()->transaction(function () use ($tenant, $email): BillingAccount {
-                $account = BillingAccount::query()->firstOrCreate(['tenant_id' => $tenant->value], ['email' => $email]);
+            return (new BillingAccount)->getConnection()->transaction(function () use ($email): BillingAccount {
+                $account = BillingAccount::query()->firstOrCreate([], ['email' => $email]);
                 if ($account->wasRecentlyCreated) {
                     ($this->events ?? BillingEvents::current())->accountChanged($account, 'created');
                 }
@@ -119,12 +115,14 @@ final readonly class StartCheckoutAction implements StartCheckoutContract
                 return $account;
             });
         } catch (UniqueConstraintViolationException) {
-            return BillingAccount::query()->where('tenant_id', $tenant->value)->firstOrFail();
+            return BillingAccount::query()->where('owner_scope_key', $owner->scopeKey())->firstOrFail();
         }
     }
 
-    /** Reserve or recover an attempt while the tenant account row is locked. */
-    private function reserveAttempt(BillingAccount $account, string $price): CheckoutAttempt
+    /** Reserve or recover an attempt while the owner account row is locked.
+     * @return array{account: BillingAccount, id: string, price: string, trialDays: int, expiresAt: CarbonImmutable, session: CheckoutSession|null}
+     */
+    private function reserveAttempt(BillingAccount $account, string $price): array
     {
         $account = BillingAccount::query()->whereKey($account->id)->lockForUpdate()->firstOrFail();
         $type = config('nvl-billing.subscription_type', 'default');
@@ -151,10 +149,10 @@ final readonly class StartCheckoutAction implements StartCheckoutContract
             }
 
             $session = $account->pending_checkout_session_id !== null && $account->pending_checkout_url !== null
-                ? new CheckoutSession($account->pending_checkout_session_id, $account->pending_checkout_url, $expiry)
+                ? ['id' => $account->pending_checkout_session_id, 'url' => $account->pending_checkout_url, 'expiresAt' => $expiry]
                 : null;
 
-            return new CheckoutAttempt($account, $account->pending_checkout_attempt_id, $price, $account->pending_checkout_trial_days ?? 0, $expiry, $session);
+            return ['account' => $account, 'id' => $account->pending_checkout_attempt_id, 'price' => $price, 'trialDays' => $account->pending_checkout_trial_days ?? 0, 'expiresAt' => $expiry, 'session' => $session];
         }
 
         $expiresAt = CarbonImmutable::now()->addHours(2);
@@ -168,7 +166,7 @@ final readonly class StartCheckoutAction implements StartCheckoutContract
             'pending_checkout_url' => null,
         ])->save();
 
-        return new CheckoutAttempt($account, $attemptId, $price, $account->pending_checkout_trial_days ?? 0, $expiresAt, null);
+        return ['account' => $account, 'id' => $attemptId, 'price' => $price, 'trialDays' => $account->pending_checkout_trial_days ?? 0, 'expiresAt' => $expiresAt, 'session' => null];
     }
 
     /** Grant the configured free trial only to a tenant that has not used one. */

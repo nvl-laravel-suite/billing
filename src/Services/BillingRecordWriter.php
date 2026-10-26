@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Nvl\Billing\Services;
 
-use Nvl\Billing\Compatibility\LegacyBillingModelScope;
 use Nvl\Billing\Models\BillingSubscription;
 use Nvl\Billing\Models\BillingSubscriptionItem;
 use Nvl\Support\Ownership\Contracts\OwnershipWriter;
@@ -18,7 +17,7 @@ final readonly class BillingRecordWriter
     /** Save the exact subscription created by the verified package synchronization workflow. */
     public function subscription(BillingSubscription $record): void
     {
-        if ($record->exists || LegacyBillingModelScope::permitsLegacy($record)) {
+        if ($record->exists) {
             $record->save();
 
             return;
@@ -33,7 +32,7 @@ final readonly class BillingRecordWriter
     /** Save the exact item created by the verified package synchronization workflow. */
     public function item(BillingSubscriptionItem $record): void
     {
-        if ($record->exists || LegacyBillingModelScope::permitsLegacy($record)) {
+        if ($record->exists) {
             $record->save();
 
             return;

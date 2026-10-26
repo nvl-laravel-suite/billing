@@ -6,14 +6,13 @@ use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
-use Nvl\Billing\Actions\StartCheckoutAction;
 use Nvl\Billing\Contracts\BillingManagementAccess;
 use Nvl\Billing\Definitions\Tables\BillingTables;
 use Nvl\Billing\Models\BillingAccount;
 use Nvl\Billing\Models\BillingWebhookEvent;
+use Nvl\Billing\Services\BillingCheckout;
 use Nvl\Billing\Testing\FakeBillingGateway;
 use Nvl\Billing\Tests\LegacyOwnerScopeTestCase;
-use Nvl\Billing\ValueObjects\CheckoutSession;
 use Nvl\Ownership\Contracts\OwnerSystemAccess;
 use Nvl\Ownership\Services\OwnershipRunner;
 use Nvl\Ownership\Tests\Fixtures\Actor;
@@ -24,7 +23,7 @@ use Nvl\Support\Ownership\ValueObjects\OwnerReference;
 uses(LegacyOwnerScopeTestCase::class);
 
 it('reuses the exact pending legacy provider attempt and customer after native activation', function (): void {
-    $gateway = FakeBillingGateway::fake(app())->willReturn('checkout', new CheckoutSession('cs_recovered', 'https://example.test/recovered', CarbonImmutable::now()->addHour()));
+    $gateway = FakeBillingGateway::fake(app())->willReturn('checkout', ['id' => 'cs_recovered', 'url' => 'https://example.test/recovered', 'expiresAt' => CarbonImmutable::now()->addHour()]);
     app()->bind(BillingManagementAccess::class, fn () => new class implements BillingManagementAccess
     {
         public function assertCanManage(Authenticatable $actor, OwnerReference $owner): void {}
@@ -32,7 +31,7 @@ it('reuses the exact pending legacy provider attempt and customer after native a
     app(OwnershipRunner::class)->run(Company::query()->findOrFail(7), Actor::query()->findOrFail(1), function () use ($gateway): void {
         $owner = app(OwnershipContext::class)->requireOwner();
         foreach ([1, 2] as $retry) {
-            expect(app(StartCheckoutAction::class)->execute($owner, Actor::query()->findOrFail(1), 'legacy@example.test', 'pro', 'monthly', 'https://example.test/success', 'https://example.test/cancel')->id)->toBe('cs_recovered');
+            expect(app(BillingCheckout::class)->start($owner, Actor::query()->findOrFail(1), 'legacy@example.test', 'pro', 'monthly', 'https://example.test/success', 'https://example.test/cancel')['id'])->toBe('cs_recovered');
         }
         $gateway->assertCalled('checkout', times: 1);
         $calls = $gateway->calls('checkout');

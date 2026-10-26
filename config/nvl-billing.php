@@ -7,7 +7,6 @@ return [
     'ownership' => ['scoped' => true],
     'adoption' => ['cashier_models' => false, 'cashier_routes' => false],
     'enabled' => false,
-    'routes' => ['webhook' => ['enabled' => false]],
     'connection' => null,
     'migrations' => ['enabled' => false],
     'subscription_type' => 'default',
