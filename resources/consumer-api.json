@@ -57,7 +57,8 @@
             "kind": "class",
             "file": "database/factories/BillingAccountFactory.php",
             "methods": [
-                "definition"
+                "definition",
+                "modelName"
             ],
             "properties": [],
             "constants": []
@@ -67,7 +68,8 @@
             "file": "database/factories/BillingSubscriptionFactory.php",
             "methods": [
                 "definition",
-                "forAccount"
+                "forAccount",
+                "modelName"
             ],
             "properties": [],
             "constants": []
@@ -182,12 +184,14 @@
                 "delete",
                 "fresh",
                 "getConnectionName",
+                "getForeignKey",
                 "getTable",
                 "newQueryForRestoration",
                 "ownershipDefinition",
                 "refresh",
                 "refreshForUpdate",
-                "save"
+                "save",
+                "subscriptions"
             ],
             "properties": [
                 "email",
@@ -218,8 +222,11 @@
                 "delete",
                 "fresh",
                 "getConnectionName",
+                "getForeignKey",
                 "getTable",
+                "items",
                 "newQueryForRestoration",
+                "owner",
                 "ownershipDefinition",
                 "refresh",
                 "refreshForUpdate",
@@ -253,7 +260,8 @@
                 "ownershipDefinition",
                 "refresh",
                 "refreshForUpdate",
-                "save"
+                "save",
+                "subscription"
             ],
             "properties": [
                 "billing_subscription_id",
@@ -293,6 +301,18 @@
             "methods": [
                 "__construct",
                 "update"
+            ],
+            "properties": [],
+            "constants": []
+        },
+        "Nvl\\Billing\\Services\\BillingModelRegistry": {
+            "kind": "class",
+            "file": "src/Services/BillingModelRegistry.php",
+            "methods": [
+                "__construct",
+                "accountModel",
+                "prepare",
+                "subscriptionModel"
             ],
             "properties": [],
             "constants": []

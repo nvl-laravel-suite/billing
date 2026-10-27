@@ -4,10 +4,9 @@ declare(strict_types=1);
 
 namespace Nvl\Billing\Ownership;
 
-use Nvl\Billing\Models\BillingAccount;
-use Nvl\Billing\Models\BillingSubscription;
 use Nvl\Billing\Models\BillingSubscriptionItem;
 use Nvl\Billing\Models\BillingWebhookEvent;
+use Nvl\Billing\Services\BillingModelRegistry;
 use Nvl\Support\Ownership\Services\OwnershipResourceRegistry;
 use Nvl\Support\Ownership\ValueObjects\OwnershipDefinition;
 use Nvl\Support\Ownership\ValueObjects\OwnershipResourceDefinition;
@@ -22,9 +21,9 @@ final readonly class BillingResourceRegistrar
     /** Register exact package-owned persistence independently from schema installation. */
     public function register(OwnershipResourceRegistry $resources, bool $owned): void
     {
-        $resources->register(new OwnershipResourceDefinition('billing.accounts', 'billing', BillingAccount::class,
+        $resources->register(new OwnershipResourceDefinition('billing.accounts', 'billing', BillingModelRegistry::accountClass(),
             $owned ? OwnershipDefinition::captured() : OwnershipDefinition::unscoped()));
-        $resources->register(new OwnershipResourceDefinition('billing.subscriptions', 'billing', BillingSubscription::class,
+        $resources->register(new OwnershipResourceDefinition('billing.subscriptions', 'billing', BillingModelRegistry::subscriptionClass(),
             $owned ? OwnershipDefinition::inherited('billingAccount') : OwnershipDefinition::unscoped(), parentResource: $owned ? 'billing.accounts' : null,
             immutableFields: $owned ? ['stripe_id'] : []));
         $resources->register(new OwnershipResourceDefinition('billing.items', 'billing', BillingSubscriptionItem::class,

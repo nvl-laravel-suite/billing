@@ -8,8 +8,6 @@ use Nvl\Billing\Catalog\PlanCatalog;
 use Nvl\Billing\Contracts\BillingAccessContract;
 use Nvl\Billing\Enums\BillingResponseCode;
 use Nvl\Billing\Exceptions\BillingException;
-use Nvl\Billing\Models\BillingAccount;
-use Nvl\Billing\Models\BillingSubscription;
 use Nvl\Billing\Models\BillingSubscriptionItem;
 use Nvl\Support\Ownership\ValueObjects\OwnerReference;
 
@@ -35,7 +33,7 @@ final readonly class BillingAccess implements BillingAccessContract
         }
 
         $this->ownership->assertOwner($owner);
-        $account = BillingAccount::query()->where('owner_scope_key', $owner->scopeKey())->first();
+        $account = BillingModelRegistry::accountQuery()->where('owner_scope_key', $owner->scopeKey())->first();
         if ($account === null || $account->provider_deleted_at !== null) {
             return $this->snapshot(null, 'free');
         }
@@ -45,7 +43,7 @@ final readonly class BillingAccess implements BillingAccessContract
             throw BillingException::because(BillingResponseCode::InvalidConfiguration, 'billing.subscription_type must be a nonempty string.');
         }
 
-        $subscriptions = BillingSubscription::query()->where('billing_account_id', $account->id)->where('type', $type);
+        $subscriptions = BillingModelRegistry::subscriptionQuery()->where('billing_account_id', $account->id)->where('type', $type);
         $subscription = (clone $subscriptions)
             ->whereIn('stripe_status', ['active', 'trialing'])
             ->latest('created_at')

@@ -17,7 +17,6 @@ use Nvl\Billing\Contracts\BillingManagementAccess;
 use Nvl\Billing\Enums\BillingResponseCode;
 use Nvl\Billing\Exceptions\BillingException;
 use Nvl\Billing\Models\BillingAccount;
-use Nvl\Billing\Models\BillingSubscription;
 use Nvl\Support\Ownership\ValueObjects\OwnerReference;
 
 /**
@@ -58,6 +57,9 @@ final readonly class BillingCheckout
         if (config('nvl-billing.enabled') !== true) {
             throw BillingException::because(BillingResponseCode::FeatureDisabled, 'Billing is disabled.');
         }
+        if ((BillingModelRegistry::newAccount())->getConnection()->transactionLevel() !== 0) {
+            throw new DomainException('Billing checkout must start outside a database transaction.');
+        }
 
         $this->management->assertCanManage($actor, $owner);
         $this->ownership->assertActor($owner, $actor);
@@ -87,7 +89,7 @@ final readonly class BillingCheckout
         );
 
         $account->getConnection()->transaction(function () use ($account, $attempt, $session): void {
-            $updated = BillingAccount::query()->whereKey($account->id)
+            $updated = BillingModelRegistry::accountQuery()->whereKey($account->id)
                 ->where('pending_checkout_attempt_id', $attempt['id'])
                 ->whereNull('pending_checkout_session_id')
                 ->update([
@@ -106,8 +108,8 @@ final readonly class BillingCheckout
     private function accountFor(OwnerReference $owner, string $email): BillingAccount
     {
         try {
-            return (new BillingAccount)->getConnection()->transaction(function () use ($email): BillingAccount {
-                $account = BillingAccount::query()->firstOrCreate([], ['email' => $email]);
+            return BillingModelRegistry::newAccount()->getConnection()->transaction(function () use ($email): BillingAccount {
+                $account = BillingModelRegistry::accountQuery()->firstOrCreate([], ['email' => $email]);
                 if ($account->wasRecentlyCreated) {
                     ($this->events ?? BillingEvents::current())->accountChanged($account, 'created');
                 }
@@ -115,7 +117,7 @@ final readonly class BillingCheckout
                 return $account;
             });
         } catch (UniqueConstraintViolationException) {
-            return BillingAccount::query()->where('owner_scope_key', $owner->scopeKey())->firstOrFail();
+            return BillingModelRegistry::accountQuery()->where('owner_scope_key', $owner->scopeKey())->firstOrFail();
         }
     }
 
@@ -124,13 +126,13 @@ final readonly class BillingCheckout
      */
     private function reserveAttempt(BillingAccount $account, string $price): array
     {
-        $account = BillingAccount::query()->whereKey($account->id)->lockForUpdate()->firstOrFail();
+        $account = BillingModelRegistry::accountQuery()->whereKey($account->id)->lockForUpdate()->firstOrFail();
         $type = config('nvl-billing.subscription_type', 'default');
         if (! is_string($type) || $type === '') {
             throw BillingException::because(BillingResponseCode::InvalidConfiguration, 'billing.subscription_type must be a nonempty string.');
         }
 
-        $hasExistingSubscription = BillingSubscription::query()
+        $hasExistingSubscription = BillingModelRegistry::subscriptionQuery()
             ->where('billing_account_id', $account->id)
             ->where('type', $type)
             ->where(function ($query): void {

@@ -7,6 +7,7 @@ namespace Nvl\Billing\Database\Factories;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Nvl\Billing\Models\BillingAccount;
 use Nvl\Billing\Models\BillingSubscription;
+use Nvl\Billing\Services\BillingModelRegistry;
 
 /**
  * Builds BillingSubscription fixture rows and their declared package parents.
@@ -21,6 +22,12 @@ final class BillingSubscriptionFactory extends Factory
     use PersistsBillingOwnership;
 
     protected $model = BillingSubscription::class;
+
+    /** @return class-string<BillingSubscription> */
+    public function modelName(): string
+    {
+        return BillingModelRegistry::subscriptionClass();
+    }
 
     /**
      * Prepare native parent and owner facts after Laravel expands relationships.
@@ -41,7 +48,7 @@ final class BillingSubscriptionFactory extends Factory
             }
 
             if ($model->getAttribute('billing_account_id') !== null) {
-                $parent = BillingAccount::query()->findOrFail(FactoryGuard::identifier($model->getAttribute('billing_account_id')));
+                $parent = BillingModelRegistry::accountQuery()->findOrFail(FactoryGuard::identifier($model->getAttribute('billing_account_id')));
                 FactoryGuard::parent($parent, $model);
             }
         });
@@ -71,7 +78,7 @@ final class BillingSubscriptionFactory extends Factory
      */
     public function forAccount(BillingAccount $parent): static
     {
-        FactoryGuard::parent($parent, new BillingSubscription);
+        FactoryGuard::parent($parent, BillingModelRegistry::newSubscription());
 
         return $this->state([
             'billing_account_id' => $parent->getKey(),

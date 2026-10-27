@@ -9,7 +9,6 @@ use Laravel\Cashier\Cashier;
 use Nvl\Billing\Catalog\PlanCatalog;
 use Nvl\Billing\Definitions\Tables\BillingTables;
 use Nvl\Billing\Exceptions\BillingException;
-use Nvl\Billing\Models\BillingAccount;
 use Nvl\Support\Doctor\DoctorCheck;
 
 /**
@@ -44,7 +43,7 @@ final class BillingDoctor
             'billing_enabled' => $enabled,
             'stripe_secret' => is_string(config('cashier.secret')) && config('cashier.secret') !== '',
             'webhook_secret' => is_string(config('cashier.webhook.secret')) && config('cashier.webhook.secret') !== '',
-            'cashier_customer_model' => config('nvl-billing.adoption.cashier_models') !== true || Cashier::$customerModel === BillingAccount::class,
+            'cashier_customer_model' => config('nvl-billing.adoption.cashier_models') !== true || Cashier::$customerModel === BillingModelRegistry::accountClass(),
         ];
 
         try {
@@ -54,7 +53,7 @@ final class BillingDoctor
             $checks['price_catalog'] = false;
         }
 
-        $configuredConnection = (new BillingAccount)->getConnectionName();
+        $configuredConnection = (BillingModelRegistry::newAccount())->getConnectionName();
         $connection = is_string($configuredConnection) ? $configuredConnection : null;
         foreach ([BillingTables::get(BillingTables::Accounts), BillingTables::get(BillingTables::Subscriptions), BillingTables::get(BillingTables::SubscriptionItems), BillingTables::get(BillingTables::WebhookEvents)] as $table) {
             $checks[$table] = ! $enabled || Schema::connection($connection)->hasTable($table);

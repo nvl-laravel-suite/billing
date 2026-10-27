@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Nvl\Billing\Services;
 
-use Nvl\Billing\Models\BillingAccount;
-use Nvl\Billing\Models\BillingSubscription;
-
 /**
  * Persists signed provider customer changes through atomic local write boundaries.
  *
@@ -25,7 +22,7 @@ final readonly class BillingCustomerSyncer
             return;
         }
 
-        $account = BillingAccount::query()->where('stripe_id', $id)->first();
+        $account = BillingModelRegistry::accountQuery()->where('stripe_id', $id)->first();
         if ($account === null) {
             return;
         }
@@ -57,7 +54,7 @@ final readonly class BillingCustomerSyncer
             return;
         }
 
-        $account = BillingAccount::query()->where('stripe_id', $id)->first();
+        $account = BillingModelRegistry::accountQuery()->where('stripe_id', $id)->first();
         if ($account === null) {
             return;
         }
@@ -67,7 +64,7 @@ final readonly class BillingCustomerSyncer
             if ($account->stripe_id === null || $account->provider_deleted_at !== null) {
                 return;
             }
-            foreach (BillingSubscription::query()->where('billing_account_id', $account->id)->get() as $subscription) {
+            foreach (BillingModelRegistry::subscriptionQuery()->where('billing_account_id', $account->id)->get() as $subscription) {
                 $this->subscriptions->cancel($subscription, $account);
             }
             $native = $account->getRawOriginal('owner_scope_key') !== null;

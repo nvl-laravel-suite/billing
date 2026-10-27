@@ -7,11 +7,13 @@ namespace Nvl\Billing\Models;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 use Laravel\Cashier\Subscription;
 use Nvl\Billing\Database\Factories\BillingSubscriptionFactory;
 use Nvl\Billing\Definitions\Tables\BillingTables;
 use Nvl\Billing\Models\Concerns\UsesBillingConnection;
+use Nvl\Billing\Services\BillingModelRegistry;
 use Nvl\Support\Config\PackageStorage;
 use Nvl\Support\Ownership\Contracts\Ownable;
 use Nvl\Support\Ownership\Traits\HasOwnership;
@@ -31,9 +33,11 @@ use Nvl\Support\Ownership\Traits\HasOwnership;
  *
  * @api
  *
+ * @nvl-consumer-host-subclasses
+ *
  * @nvl-consumer-read id
  */
-final class BillingSubscription extends Subscription implements Ownable
+class BillingSubscription extends Subscription implements Ownable
 {
     /** @use HasFactory<BillingSubscriptionFactory> */
     use HasFactory;
@@ -51,7 +55,29 @@ final class BillingSubscription extends Subscription implements Ownable
      */
     public function billingAccount(): BelongsTo
     {
-        return $this->belongsTo(BillingAccount::class, 'billing_account_id');
+        return $this->belongsTo(BillingModelRegistry::accountClass(), 'billing_account_id');
+    }
+
+    /** Retain Cashier's owner relation on the native configured account.
+     * @return BelongsTo<BillingAccount, $this>
+     */
+    public function owner(): BelongsTo
+    {
+        return $this->billingAccount();
+    }
+
+    /** Technical item rows retain their native class and fixed parent key.
+     * @return HasMany<BillingSubscriptionItem, $this>
+     */
+    public function items(): HasMany
+    {
+        return $this->hasMany(BillingSubscriptionItem::class, 'billing_subscription_id');
+    }
+
+    /** Preserve native relation keys when a deployment selects a subclass. */
+    public function getForeignKey(): string
+    {
+        return 'billing_subscription_id';
     }
 
     /** Resolve the configured package storage table. */

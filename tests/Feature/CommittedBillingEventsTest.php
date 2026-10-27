@@ -89,3 +89,25 @@ it('publishes the first persisted checkout session and reuses it without another
         $gateway->assertCalled('checkout');
     });
 });
+
+it('rejects checkout inside an outer transaction before reservations or provider work', function (): void {
+    billingNativeRun(function (): void {
+        $access = Mockery::mock(BillingManagementAccess::class);
+        $access->shouldReceive('assertCanManage')->zeroOrMoreTimes();
+        app()->instance(BillingManagementAccess::class, $access);
+        $gateway = FakeBillingGateway::fake(app())->willReturn('checkout', ['id' => 'cs_outer', 'url' => 'https://checkout.stripe.com/outer', 'expiresAt' => CarbonImmutable::now()->addHour()]);
+        $connection = (new BillingAccount)->getConnection();
+        expect($connection->transactionLevel())->toBe(0);
+        $actor = Actor::query()->findOrFail(1);
+        $owner = billingNativeOwner(7);
+        $connection->beginTransaction();
+        try {
+            expect(fn () => app(BillingCheckout::class)->start($owner, $actor, 'billing@example.test', 'pro', 'monthly', 'https://example.test/success', 'https://example.test/cancel'))
+                ->toThrow(DomainException::class, 'outside a database transaction');
+            expect(BillingAccount::query()->count())->toBe(0)
+                ->and($gateway->calls('checkout'))->toBe([]);
+        } finally {
+            $connection->rollBack();
+        }
+    });
+});

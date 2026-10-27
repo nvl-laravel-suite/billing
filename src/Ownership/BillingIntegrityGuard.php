@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Nvl\Billing\Ownership;
 
-use Nvl\Billing\Models\BillingAccount;
+use Nvl\Billing\Services\BillingModelRegistry;
 use Nvl\Support\Ownership\Contracts\OwnershipReadiness;
 use Nvl\Support\Ownership\Services\OwnershipConstraintInspector;
 
@@ -22,7 +22,7 @@ final readonly class BillingIntegrityGuard
     public function assertReady(): void
     {
         $this->readiness->assertActive('billing.accounts');
-        $model = new BillingAccount;
+        $model = BillingModelRegistry::newAccount();
         $this->constraints->assertPresent($model->getConnection(), $model->getTable(), 'update', 'assigned:'.hash('sha256', json_encode(['stripe_id'], JSON_THROW_ON_ERROR)));
         $this->constraints->assertUniqueIndexes($model->getConnection(), $model->getTable(), [['owner_scope_key'], ['stripe_id']]);
     }

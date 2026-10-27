@@ -37,19 +37,19 @@ final class BillingSubscriptionSyncer
             throw BillingException::because(BillingResponseCode::ProviderPayloadInvalid, 'Stripe subscription data is incomplete.');
         }
 
-        $account = BillingAccount::query()->where('stripe_id', $customerId)->first();
+        $account = BillingModelRegistry::accountQuery()->where('stripe_id', $customerId)->first();
         if ($account === null) {
             return;
         }
 
         $account->getConnection()->transaction(function () use ($account, $subscription, $subscriptionId, $status, $items): void {
-            BillingAccount::query()->whereKey($account->id)->lockForUpdate()->firstOrFail();
+            BillingModelRegistry::accountQuery()->whereKey($account->id)->lockForUpdate()->firstOrFail();
             $metadata = $subscription['metadata'] ?? null;
             $type = is_array($metadata) && is_string($metadata['type'] ?? null)
                 ? $metadata['type']
                 : 'default';
             $itemValues = $this->items($items['data']);
-            $record = BillingSubscription::query()->firstOrNew(['stripe_id' => $subscriptionId]);
+            $record = BillingModelRegistry::subscriptionQuery()->firstOrNew(['stripe_id' => $subscriptionId]);
             if ($record->exists && $record->billing_account_id !== $account->id) {
                 throw BillingException::because(BillingResponseCode::ProviderIdentityMismatch, 'Stripe subscription belongs to another billing account.');
             }
@@ -104,7 +104,7 @@ final class BillingSubscriptionSyncer
     public function cancel(BillingSubscription $subscription, BillingAccount $account): void
     {
         $subscription->getConnection()->transaction(function () use ($subscription): void {
-            $current = BillingSubscription::query()->whereKey($subscription->id)->lockForUpdate()->firstOrFail();
+            $current = BillingModelRegistry::subscriptionQuery()->whereKey($subscription->id)->lockForUpdate()->firstOrFail();
             if ($current->stripe_status === 'canceled' && $current->ends_at !== null) {
                 return;
             }

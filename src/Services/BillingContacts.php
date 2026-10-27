@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Nvl\Billing\Services;
 
+use DomainException;
 use Illuminate\Contracts\Auth\Authenticatable;
 use InvalidArgumentException;
 use Nvl\Billing\Contracts\BillingGateway;
@@ -44,10 +45,10 @@ final readonly class BillingContacts
             throw new InvalidArgumentException('A valid billing contact name and email are required.');
         }
 
-        $account = BillingAccount::query()->where('owner_scope_key', $owner->scopeKey())->first();
+        $account = BillingModelRegistry::accountQuery()->where('owner_scope_key', $owner->scopeKey())->first();
         if ($account === null) {
-            return (new BillingAccount)->getConnection()->transaction(function () use ($name, $email): BillingAccount {
-                $created = BillingAccount::query()->create(['name' => $name, 'email' => $email]);
+            return BillingModelRegistry::newAccount()->getConnection()->transaction(function () use ($name, $email): BillingAccount {
+                $created = BillingModelRegistry::accountQuery()->create(['name' => $name, 'email' => $email]);
                 ($this->events ?? BillingEvents::current())->accountChanged($created, 'created');
 
                 return $created;
@@ -55,6 +56,9 @@ final readonly class BillingContacts
         }
 
         if ($account->stripe_id !== null) {
+            if ($account->getConnection()->transactionLevel() !== 0) {
+                throw new DomainException('Remote billing contact updates must start outside a database transaction.');
+            }
             $this->gateway->updateCustomer($account, $name, $email);
         }
 

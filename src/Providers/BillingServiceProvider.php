@@ -16,13 +16,12 @@ use Nvl\Billing\Contracts\BillingPortalContract;
 use Nvl\Billing\Contracts\SubscriptionReader;
 use Nvl\Billing\Enums\BillingResponseCode;
 use Nvl\Billing\Exceptions\BillingException;
-use Nvl\Billing\Models\BillingAccount;
-use Nvl\Billing\Models\BillingSubscription;
 use Nvl\Billing\Models\BillingSubscriptionItem;
 use Nvl\Billing\Ownership\BillingAdoptionAdapter;
 use Nvl\Billing\Ownership\BillingResourceRegistrar;
 use Nvl\Billing\Services\BillingAccess;
 use Nvl\Billing\Services\BillingDoctor;
+use Nvl\Billing\Services\BillingModelRegistry;
 use Nvl\Billing\Services\BillingPortal;
 use Nvl\Billing\Services\DenyBillingManagementAccess;
 use Nvl\Billing\Services\StripeBillingGateway;
@@ -58,6 +57,8 @@ final class BillingServiceProvider extends ServiceProvider implements OwnershipI
         });
 
         $this->mergePackageConfiguration(__DIR__.'/../../config/nvl-billing.php', 'billing');
+        $this->app->singleton(BillingModelRegistry::class);
+        $this->app->booting(fn () => $this->app->make(BillingModelRegistry::class)->prepare());
         if (config('nvl-billing.adoption.cashier_routes') === true) {
             Cashier::ignoreRoutes();
         }
@@ -94,8 +95,8 @@ final class BillingServiceProvider extends ServiceProvider implements OwnershipI
             }
 
             if (config('nvl-billing.adoption.cashier_models') === true) {
-                Cashier::useCustomerModel(BillingAccount::class);
-                Cashier::useSubscriptionModel(BillingSubscription::class);
+                Cashier::useCustomerModel(BillingModelRegistry::accountClass());
+                Cashier::useSubscriptionModel(BillingModelRegistry::subscriptionClass());
                 Cashier::useSubscriptionItemModel(BillingSubscriptionItem::class);
             }
         }

@@ -26,7 +26,7 @@ final readonly class BillingRecordWriter
 
             return;
         }
-        $this->writer->create(BillingSubscription::class, static function (array $ownership) use ($record): BillingSubscription {
+        $this->writer->create(BillingModelRegistry::subscriptionClass(), static function (array $ownership) use ($record): BillingSubscription {
             $record->forceFill($ownership)->save();
 
             return $record;

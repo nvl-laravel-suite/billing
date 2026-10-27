@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Nvl\Billing\Console\Commands;
 
 use Illuminate\Console\Command;
-use Nvl\Billing\Models\BillingAccount;
+use Nvl\Billing\Services\BillingModelRegistry;
 use Nvl\Billing\Services\BillingReconciler;
 use Nvl\Support\Ownership\Contracts\OwnershipReadiness;
 use Nvl\Support\Ownership\Contracts\OwnershipSystemRunner;
@@ -30,7 +30,7 @@ final class BillingReconcileCommand extends Command
 
             return self::SUCCESS;
         }
-        $model = new BillingAccount;
+        $model = BillingModelRegistry::newAccount();
         foreach ($model->getConnection()->table($model->getTable())->useWritePdo()->whereNotNull('stripe_id')->orderBy('id')->select(['id', 'owner_scope_key', 'owner_reference'])->lazyById(100) as $row) {
             if (! is_string($row->owner_reference)) {
                 throw new OwnershipViolation;

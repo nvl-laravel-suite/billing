@@ -8,10 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Nvl\Billing\Contracts\SubscriptionReader;
 use Nvl\Billing\Enums\BillingResponseCode;
 use Nvl\Billing\Exceptions\BillingException;
-use Nvl\Billing\Models\BillingAccount;
-use Nvl\Billing\Models\BillingSubscription;
 use Nvl\Support\Ownership\ValueObjects\OwnerReference;
-use TypeError;
 
 /**
  * Repairs a owner's local Cashier state from Stripe's current objects.
@@ -32,7 +29,7 @@ final readonly class BillingReconciler
     public function reconcile(OwnerReference $owner): void
     {
         $this->ownership->assertOwner($owner);
-        $account = BillingAccount::query()->where('owner_scope_key', $owner->scopeKey())->first();
+        $account = BillingModelRegistry::accountQuery()->where('owner_scope_key', $owner->scopeKey())->first();
         if ($account === null || $account->stripe_id === null) {
             return;
         }
@@ -54,9 +51,6 @@ final readonly class BillingReconciler
 
             $missing = $account->subscriptions()->whereNotIn('stripe_id', $remoteIds)->get();
             foreach ($missing as $subscription) {
-                if (! $subscription instanceof BillingSubscription) {
-                    throw new TypeError('Billing reconciliation requires the configured Billing subscription model.');
-                }
                 $this->syncer->cancel($subscription, $account);
             }
         });

@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Nvl\Billing\Ownership;
 
 use Closure;
-use Nvl\Billing\Models\BillingAccount;
 use Nvl\Billing\Models\BillingWebhookEvent;
+use Nvl\Billing\Services\BillingModelRegistry;
 use Nvl\Support\Ownership\Contracts\OwnershipBoundary;
 use Nvl\Support\Ownership\Contracts\OwnershipReadiness;
 use Nvl\Support\Ownership\Contracts\OwnershipSystemRunner;
@@ -53,7 +53,7 @@ final readonly class BillingProviderAdmission
         if (! is_string($customer) || $customer === '') {
             throw new OwnershipViolation('Verified billing events require their exact customer identity.');
         }
-        $model = new BillingAccount;
+        $model = BillingModelRegistry::newAccount();
         $row = $model->getConnection()->table($model->getTable())->useWritePdo()->where('stripe_id', $customer)
             ->first(['owner_scope_key', 'owner_reference']);
         if ($row === null) {

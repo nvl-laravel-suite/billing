@@ -8,11 +8,13 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 use Laravel\Cashier\Billable;
 use Nvl\Billing\Database\Factories\BillingAccountFactory;
 use Nvl\Billing\Definitions\Tables\BillingTables;
 use Nvl\Billing\Models\Concerns\UsesBillingConnection;
+use Nvl\Billing\Services\BillingModelRegistry;
 use Nvl\Support\Config\PackageStorage;
 use Nvl\Support\Ownership\Contracts\Ownable;
 use Nvl\Support\Ownership\Traits\HasOwnership;
@@ -37,8 +39,10 @@ use Nvl\Support\Ownership\Traits\HasOwnership;
  * @property int|null $pending_checkout_trial_days
  *
  * @api
+ *
+ * @nvl-consumer-host-subclasses
  */
-final class BillingAccount extends Model implements Ownable
+class BillingAccount extends Model implements Ownable
 {
     use Billable;
 
@@ -66,6 +70,20 @@ final class BillingAccount extends Model implements Ownable
             'pending_checkout_expires_at' => 'immutable_datetime',
             'pending_checkout_trial_days' => 'integer',
         ];
+    }
+
+    /** Keep native subscriptions independent of optional global Cashier adoption.
+     * @return HasMany<BillingSubscription, $this>
+     */
+    public function subscriptions(): HasMany
+    {
+        return $this->hasMany(BillingModelRegistry::subscriptionClass(), 'billing_account_id')->orderBy('created_at', 'desc');
+    }
+
+    /** Preserve native relation keys when a deployment selects a subclass. */
+    public function getForeignKey(): string
+    {
+        return 'billing_account_id';
     }
 
     /** Resolve the configured package storage table. */

@@ -7,6 +7,7 @@ namespace Nvl\Billing\Database\Factories;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Nvl\Billing\Models\BillingSubscription;
 use Nvl\Billing\Models\BillingSubscriptionItem;
+use Nvl\Billing\Services\BillingModelRegistry;
 
 /**
  * Builds BillingSubscriptionItem fixture rows and their declared package parents.
@@ -41,7 +42,7 @@ final class BillingSubscriptionItemFactory extends Factory
             }
 
             if ($model->getAttribute('billing_subscription_id') !== null) {
-                $parent = BillingSubscription::query()->findOrFail(FactoryGuard::identifier($model->getAttribute('billing_subscription_id')));
+                $parent = BillingModelRegistry::subscriptionQuery()->findOrFail(FactoryGuard::identifier($model->getAttribute('billing_subscription_id')));
                 FactoryGuard::parent($parent, $model);
             }
         });

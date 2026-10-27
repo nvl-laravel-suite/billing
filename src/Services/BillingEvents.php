@@ -52,7 +52,7 @@ final readonly class BillingEvents
     public function subscriptionChanged(BillingSubscription $subscription, ?string $previousStatus): void
     {
         if (config('nvl-billing.enabled') === true) {
-            $account = BillingAccount::query()->findOrFail($subscription->billing_account_id);
+            $account = BillingModelRegistry::accountQuery()->findOrFail($subscription->billing_account_id);
             $this->events->dispatch(new BillingSubscriptionChanged($subscription->id, $account->id, $account->tenant_id, $previousStatus, $subscription->stripe_status), $subscription->getConnection());
         }
     }

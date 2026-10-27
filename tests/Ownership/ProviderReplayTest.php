@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\QueryException;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
+use Nvl\Billing\Contracts\SubscriptionReader;
 use Nvl\Billing\Definitions\Tables\BillingTables;
 use Nvl\Billing\Models\BillingAccount;
 use Nvl\Billing\Models\BillingSubscription;
@@ -28,6 +29,10 @@ it('resolves signed provider events only through the stored customer owner and p
         'id' => 'sub_native', 'customer' => 'cus_native', 'status' => 'active', 'metadata' => ['type' => 'default', 'owner_id' => 8],
         'items' => ['data' => [['id' => 'si_native', 'price' => ['id' => 'price_pro', 'product' => 'prod_native'], 'quantity' => 1]]],
     ]]], JSON_THROW_ON_ERROR);
+    $reader = Mockery::mock(SubscriptionReader::class);
+    $reader->shouldReceive('forCustomer')->once()->with('cus_native')
+        ->andReturn([json_decode($body, true, flags: JSON_THROW_ON_ERROR)['data']['object']]);
+    app()->instance(SubscriptionReader::class, $reader);
     $stamp = time();
     $signature = hash_hmac('sha256', $stamp.'.'.$body, 'whsec_billing_test');
     $headers = ['CONTENT_TYPE' => 'application/json', 'HTTP_Stripe_Signature' => 't='.$stamp.',v1='.$signature];

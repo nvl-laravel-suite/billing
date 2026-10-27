@@ -8,6 +8,8 @@
                 "connection",
                 "enabled",
                 "migrations.enabled",
+                "models.account",
+                "models.subscription",
                 "ownership.scoped"
             ],
             "advanced": [

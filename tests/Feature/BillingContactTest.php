@@ -7,6 +7,7 @@ use Nvl\Billing\Contracts\BillingGateway;
 use Nvl\Billing\Contracts\BillingManagementAccess;
 use Nvl\Billing\Models\BillingAccount;
 use Nvl\Billing\Services\BillingContacts;
+use Nvl\Billing\Testing\FakeBillingGateway;
 use Nvl\Ownership\Tests\Fixtures\Actor;
 use Nvl\Ownership\Tests\Fixtures\Company;
 use Nvl\Support\Ownership\ValueObjects\OwnerReference as TenantId;
@@ -64,5 +65,28 @@ it('rejects invalid billing contacts without creating an account', function (): 
             public function assertCanManage(Authenticatable $actor, TenantId $tenant): void {}
         });
         expect(fn () => app(BillingContacts::class)->update(billingNativeOwner(7), Actor::query()->findOrFail(1), ' ', 'not-an-email'))->toThrow(InvalidArgumentException::class)->and(BillingAccount::query()->count())->toBe(0);
+    });
+});
+
+it('rejects remote contact updates inside an outer transaction without changing either side', function (): void {
+    billingNativeRun(function (): void {
+        $account = BillingAccount::query()->forceCreate(['name' => 'Original', 'email' => 'old@example.test', 'stripe_id' => 'cus_outer_contact']);
+        $access = Mockery::mock(BillingManagementAccess::class);
+        $access->shouldReceive('assertCanManage')->once();
+        app()->instance(BillingManagementAccess::class, $access);
+        $gateway = FakeBillingGateway::fake(app())->willReturn('updateCustomer', null);
+        $connection = $account->getConnection();
+        $owner = billingNativeOwner(7);
+        $actor = Actor::query()->findOrFail(1);
+        $connection->beginTransaction();
+        try {
+            expect(fn () => app(BillingContacts::class)->update($owner, $actor, 'Changed', 'changed@example.test'))
+                ->toThrow(DomainException::class, 'outside a database transaction');
+            expect($gateway->calls('updateCustomer'))->toBe([])
+                ->and($account->fresh()->name)->toBe('Original')
+                ->and($account->fresh()->email)->toBe('old@example.test');
+        } finally {
+            $connection->rollBack();
+        }
     });
 });

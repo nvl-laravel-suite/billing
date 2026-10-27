@@ -10,7 +10,6 @@ use Nvl\Billing\Contracts\BillingManagementAccess;
 use Nvl\Billing\Contracts\BillingPortalContract;
 use Nvl\Billing\Enums\BillingResponseCode;
 use Nvl\Billing\Exceptions\BillingException;
-use Nvl\Billing\Models\BillingAccount;
 use Nvl\Support\Ownership\ValueObjects\OwnerReference;
 
 /**
@@ -36,7 +35,7 @@ final readonly class BillingPortal implements BillingPortalContract
 
         $this->management->assertCanManage($actor, $owner);
         $this->ownership->assertActor($owner, $actor);
-        $account = BillingAccount::query()->where('owner_scope_key', $owner->scopeKey())->first();
+        $account = BillingModelRegistry::accountQuery()->where('owner_scope_key', $owner->scopeKey())->first();
 
         if ($account === null || $account->stripe_id === null) {
             throw BillingException::because(BillingResponseCode::SubscriptionConflict, 'The tenant has no Stripe billing customer.');
