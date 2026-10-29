@@ -43,6 +43,7 @@ final class BillingDoctor
             'billing_enabled' => $enabled,
             'stripe_secret' => is_string(config('cashier.secret')) && config('cashier.secret') !== '',
             'webhook_secret' => is_string(config('cashier.webhook.secret')) && config('cashier.webhook.secret') !== '',
+            'return_hosts' => is_array(config('nvl-billing.checkout.return_hosts')) && config('nvl-billing.checkout.return_hosts') !== [],
             'cashier_customer_model' => config('nvl-billing.adoption.cashier_models') !== true || Cashier::$customerModel === BillingModelRegistry::accountClass(),
         ];
 

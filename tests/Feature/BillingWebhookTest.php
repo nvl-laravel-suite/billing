@@ -32,6 +32,15 @@ function billingSignedSubscription(string $eventId, string $type, array $subscri
     app(BillingWebhooks::class)->process($payload, "t={$timestamp},v1={$signature}");
 }
 
+it('rejects signed deliveries while billing is disabled without recording receipts', function (): void {
+    billingNativeRun(function (): void {
+        config()->set('nvl-billing.enabled', false);
+        expect(fn () => billingSignedSubscription('evt_disabled', 'customer.updated', ['id' => 'cus_disabled']))
+            ->toThrow(BillingException::class, 'Billing is disabled');
+        expect(DB::table(BillingTables::WebhookEvents)->count())->toBe(0);
+    });
+});
+
 it('requires a signed webhook and applies each Stripe event once', function (): void {
     billingNativeRun(function () {
         $account = BillingAccount::query()->forceCreate(['email' => 'billing@example.test', 'stripe_id' => 'cus_billing_test', 'pending_checkout_attempt_id' => 'a3922877-192b-436e-a562-e97b3a719152', 'pending_checkout_price' => 'price_pro_month']);

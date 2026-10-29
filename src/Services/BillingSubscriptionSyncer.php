@@ -45,9 +45,13 @@ final class BillingSubscriptionSyncer
         $account->getConnection()->transaction(function () use ($account, $subscription, $subscriptionId, $status, $items): void {
             BillingModelRegistry::accountQuery()->whereKey($account->id)->lockForUpdate()->firstOrFail();
             $metadata = $subscription['metadata'] ?? null;
-            $type = is_array($metadata) && is_string($metadata['type'] ?? null)
+            $configuredType = config('nvl-billing.subscription_type', 'default');
+            if (! is_string($configuredType) || trim($configuredType) === '') {
+                throw BillingException::because(BillingResponseCode::InvalidConfiguration, 'billing.subscription_type must be a nonempty string.');
+            }
+            $type = is_array($metadata) && is_string($metadata['type'] ?? null) && $metadata['type'] !== ''
                 ? $metadata['type']
-                : 'default';
+                : $configuredType;
             $itemValues = $this->items($items['data']);
             $record = BillingModelRegistry::subscriptionQuery()->firstOrNew(['stripe_id' => $subscriptionId]);
             if ($record->exists && $record->billing_account_id !== $account->id) {

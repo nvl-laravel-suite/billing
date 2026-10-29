@@ -36,8 +36,8 @@ final readonly class BillingContacts
             throw BillingException::because(BillingResponseCode::FeatureDisabled, 'Billing is disabled.');
         }
 
+        $actor = $this->ownership->resolveActor($owner, $actor);
         $this->management->assertCanManage($actor, $owner);
-        $this->ownership->assertActor($owner, $actor);
 
         $name = trim($name);
         $email = trim($email);

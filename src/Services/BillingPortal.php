@@ -7,7 +7,6 @@ namespace Nvl\Billing\Services;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Nvl\Billing\Contracts\BillingGateway;
 use Nvl\Billing\Contracts\BillingManagementAccess;
-use Nvl\Billing\Contracts\BillingPortalContract;
 use Nvl\Billing\Enums\BillingResponseCode;
 use Nvl\Billing\Exceptions\BillingException;
 use Nvl\Support\Ownership\ValueObjects\OwnerReference;
@@ -17,13 +16,14 @@ use Nvl\Support\Ownership\ValueObjects\OwnerReference;
  *
  * @api
  */
-final readonly class BillingPortal implements BillingPortalContract
+final readonly class BillingPortal
 {
     /** Inject permission, tenant, and Stripe boundaries. */
     public function __construct(
         private BillingOwnerBoundary $ownership,
         private BillingManagementAccess $management,
         private BillingGateway $gateway,
+        private BillingReturnUrls $returnUrls,
     ) {}
 
     /** Return a hosted portal URL without exposing another owner's customer. */
@@ -33,8 +33,9 @@ final readonly class BillingPortal implements BillingPortalContract
             throw BillingException::because(BillingResponseCode::FeatureDisabled, 'Billing is disabled.');
         }
 
+        $actor = $this->ownership->resolveActor($owner, $actor);
         $this->management->assertCanManage($actor, $owner);
-        $this->ownership->assertActor($owner, $actor);
+        $this->returnUrls->validate($returnUrl);
         $account = BillingModelRegistry::accountQuery()->where('owner_scope_key', $owner->scopeKey())->first();
 
         if ($account === null || $account->stripe_id === null) {

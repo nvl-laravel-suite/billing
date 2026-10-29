@@ -34,6 +34,7 @@ final readonly class BillingCheckout
         private BillingManagementAccess $management,
         private PlanCatalog $catalog,
         private BillingGateway $gateway,
+        private BillingReturnUrls $returnUrls,
         private ?BillingEvents $events = null,
     ) {}
 
@@ -61,10 +62,11 @@ final readonly class BillingCheckout
             throw new DomainException('Billing checkout must start outside a database transaction.');
         }
 
+        $actor = $this->ownership->resolveActor($owner, $actor);
         $this->management->assertCanManage($actor, $owner);
-        $this->ownership->assertActor($owner, $actor);
+        $this->returnUrls->validate($successUrl, $cancelUrl);
 
-        if (filter_var($billingEmail, FILTER_VALIDATE_EMAIL) === false) {
+        if (strlen($billingEmail) > 255 || filter_var($billingEmail, FILTER_VALIDATE_EMAIL) === false) {
             throw new InvalidArgumentException('A valid billing email is required.');
         }
 

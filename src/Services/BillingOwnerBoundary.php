@@ -6,6 +6,7 @@ namespace Nvl\Billing\Services;
 
 use Illuminate\Contracts\Auth\Authenticatable;
 use Nvl\Billing\Ownership\BillingIntegrityGuard;
+use Nvl\Support\Auth\CanonicalActorResolver;
 use Nvl\Support\Ownership\Exceptions\OwnershipViolation;
 use Nvl\Support\Ownership\Services\OwnershipContextResolver;
 use Nvl\Support\Ownership\Services\OwnershipResourceRegistry;
@@ -19,7 +20,7 @@ use Nvl\Support\Ownership\ValueObjects\OwnerReference;
 final readonly class BillingOwnerBoundary
 {
     /** Retain neutral ownership contracts rather than a directory or lifecycle dependency. */
-    public function __construct(private OwnershipContextResolver $context, private OwnershipResourceRegistry $resources, private BillingIntegrityGuard $integrity) {}
+    public function __construct(private OwnershipContextResolver $context, private OwnershipResourceRegistry $resources, private BillingIntegrityGuard $integrity, private CanonicalActorResolver $actors) {}
 
     /** Require the complete native owner identity and active actual source. */
     public function assertOwner(OwnerReference $owner): void
@@ -32,9 +33,10 @@ final readonly class BillingOwnerBoundary
     }
 
     /** Bind the management actor argument to the actual admitted producer. */
-    public function assertActor(OwnerReference $owner, Authenticatable $actor): void
+    public function resolveActor(OwnerReference $owner, Authenticatable $actor): Authenticatable
     {
         $this->assertOwner($owner);
+        $actor = $this->actors->resolve($actor);
         $id = $actor->getAuthIdentifier();
         if (! is_string($id) && ! is_int($id)) {
             throw new OwnershipViolation('Billing actors require a stable scalar identity.');
@@ -43,5 +45,7 @@ final readonly class BillingOwnerBoundary
         if ($principal !== ['kind' => 'actor', 'type' => $actor::class, 'id' => (string) $id]) {
             throw new OwnershipViolation('Billing actor and admitted producer must match.');
         }
+
+        return $actor;
     }
 }

@@ -1,10 +1,24 @@
 <?php
 
 declare(strict_types=1);
+use Nvl\Billing\Exceptions\BillingException;
 use Nvl\Billing\Models\BillingAccount;
 use Nvl\Billing\Models\BillingSubscription;
 use Nvl\Billing\Models\BillingSubscriptionItem;
 use Nvl\Billing\Services\BillingAccess;
+
+it('rejects malformed feature and limit policies at the native read boundary', function (array $policy): void {
+    billingNativeRun(function () use ($policy): void {
+        config()->set('nvl-billing.access.free', $policy);
+        expect(fn () => app(BillingAccess::class)->forOwner(billingNativeOwner(7)))
+            ->toThrow(BillingException::class, 'Billing access');
+    });
+})->with([
+    [['features' => 'reports', 'limits' => []]],
+    [['features' => [123], 'limits' => []]],
+    [['features' => [], 'limits' => ['seats' => '10']]],
+    [['features' => [], 'limits' => [10]]],
+]);
 
 it('grants only the purchased plan to its owning tenant', function (): void {
     billingNativeRun(function () {

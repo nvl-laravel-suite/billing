@@ -28,6 +28,7 @@ abstract class OwnerScopeTestCase extends OwnershipTestCase
         parent::defineEnvironment($app);
         $app['config']->set([
             'nvl-billing.enabled' => true,
+            'nvl-billing.checkout.return_hosts' => ['app.test', 'example.test'],
             'nvl-billing.ownership.scoped' => true,
             'nvl-billing.migrations.enabled' => false,
             'nvl-billing.adoption.cashier_models' => true,

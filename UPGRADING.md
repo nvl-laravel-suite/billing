@@ -5,3 +5,5 @@ Requires PHP 8.4 and Laravel 13. Replace the previous checkout/contact Actions w
 The deprecated Tenancy bridge, package webhook controller and route are removed. Use native ownership admission and an application webhook endpoint calling `BillingWebhooks::process($rawPayload, $signature)`. Signature verification and transactional replay handling remain inside the service.
 
 Keep existing provider identities, pending attempts and historical receipts when adopting populated storage. Billing still requires Cashier and Stripe. Configure host management and system-operation policies explicitly. See the [service reference](README.md).
+
+Inject concrete `BillingAccess` and `BillingPortal` services in place of the removed `BillingAccessContract` and `BillingPortalContract`. Keep `BillingGateway`, `SubscriptionReader` and `BillingManagementAccess` for provider and host extension. Configure exact HTTPS return hosts under `nvl-billing.checkout.return_hosts` for Checkout and Portal. Reconciliation now refuses ambient transactions and concurrent local changes instead of applying stale provider facts. No schema migration or provider identity conversion is needed.

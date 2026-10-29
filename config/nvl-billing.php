@@ -15,6 +15,7 @@ return [
     'migrations' => ['enabled' => false],
     'subscription_type' => 'default',
     'prices' => [],
+    'checkout' => ['return_hosts' => []],
     'access' => [
         'free' => ['features' => [], 'limits' => []],
         'plans' => [],

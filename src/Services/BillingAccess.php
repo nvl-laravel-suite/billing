@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Nvl\Billing\Services;
 
 use Nvl\Billing\Catalog\PlanCatalog;
-use Nvl\Billing\Contracts\BillingAccessContract;
 use Nvl\Billing\Enums\BillingResponseCode;
 use Nvl\Billing\Exceptions\BillingException;
 use Nvl\Billing\Models\BillingSubscriptionItem;
@@ -14,11 +13,11 @@ use Nvl\Support\Ownership\ValueObjects\OwnerReference;
 /**
  * Resolves tenant features and limits from Cashier's synchronized state.
  *
- * @phpstan-import-type BillingAccessState from BillingAccessContract
+ * @phpstan-type BillingAccessState array{plan:string|null,state:string,features:list<string>,limits:array<string,int>}
  *
  * @api
  */
-final readonly class BillingAccess implements BillingAccessContract
+final readonly class BillingAccess
 {
     /** Create the read-only access resolver with the configured Price catalog. */
     public function __construct(private PlanCatalog $catalog, private BillingOwnerBoundary $ownership) {}
@@ -93,11 +92,26 @@ final readonly class BillingAccess implements BillingAccessContract
             throw BillingException::because(BillingResponseCode::InvalidConfiguration, 'Billing access policy must be an array.');
         }
 
-        /** @var list<string> $features */
         $features = $policy['features'] ?? [];
-        /** @var array<string, int> $limits */
         $limits = $policy['limits'] ?? [];
+        if (! is_array($features) || ! array_is_list($features) || ! is_array($limits)) {
+            throw BillingException::because(BillingResponseCode::InvalidConfiguration, 'Billing access features and limits must be native lists and maps.');
+        }
+        $validatedFeatures = [];
+        foreach ($features as $feature) {
+            if (! is_string($feature) || trim($feature) === '') {
+                throw BillingException::because(BillingResponseCode::InvalidConfiguration, 'Billing access features must be nonempty strings.');
+            }
+            $validatedFeatures[] = $feature;
+        }
+        $validatedLimits = [];
+        foreach ($limits as $name => $limit) {
+            if (! is_string($name) || trim($name) === '' || ! is_int($limit)) {
+                throw BillingException::because(BillingResponseCode::InvalidConfiguration, 'Billing access limits must map names to integers.');
+            }
+            $validatedLimits[$name] = $limit;
+        }
 
-        return ['plan' => $plan, 'state' => $state, 'features' => $features, 'limits' => $limits];
+        return ['plan' => $plan, 'state' => $state, 'features' => $validatedFeatures, 'limits' => $validatedLimits];
     }
 }

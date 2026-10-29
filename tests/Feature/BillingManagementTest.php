@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 use Carbon\CarbonImmutable;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Nvl\Billing\Contracts\BillingGateway;
 use Nvl\Billing\Contracts\BillingManagementAccess;
@@ -9,11 +10,52 @@ use Nvl\Billing\Exceptions\BillingException;
 use Nvl\Billing\Models\BillingAccount;
 use Nvl\Billing\Models\BillingSubscription;
 use Nvl\Billing\Services\BillingCheckout;
+use Nvl\Billing\Services\BillingContacts;
 use Nvl\Billing\Services\BillingPortal;
 use Nvl\Ownership\Tests\Fixtures\Actor;
 use Nvl\Ownership\Tests\Fixtures\Company;
 use Nvl\Support\Exceptions\BindingRequiredException;
 use Nvl\Support\Ownership\ValueObjects\OwnerReference as TenantId;
+
+it('rejects unsafe billing return URLs before creating accounts or calling gateways', function (string $url): void {
+    billingNativeRun(function () use ($url): void {
+        $access = Mockery::mock(BillingManagementAccess::class);
+        $access->shouldReceive('assertCanManage');
+        app()->instance(BillingManagementAccess::class, $access);
+        app()->instance(BillingGateway::class, Mockery::mock(BillingGateway::class));
+        $owner = billingNativeOwner(7);
+        $actor = Actor::query()->findOrFail(1);
+        expect(fn () => app(BillingCheckout::class)->start($owner, $actor, 'billing@example.test', 'pro', 'monthly', $url, 'https://app.test/cancel'))->toThrow(InvalidArgumentException::class);
+        expect(fn () => app(BillingCheckout::class)->start($owner, $actor, 'billing@example.test', 'pro', 'monthly', 'https://app.test/success', $url))->toThrow(InvalidArgumentException::class);
+        expect(BillingAccount::query()->count())->toBe(0);
+        BillingAccount::query()->forceCreate(['email' => 'billing@example.test', 'stripe_id' => 'cus_return']);
+        expect(fn () => app(BillingPortal::class)->url($owner, $actor, $url))->toThrow(InvalidArgumentException::class);
+    });
+})->with(['http://app.test/return', 'https://evil.test/return', 'https://app.test.evil.test', 'https://user:secret@app.test', '//app.test/path', 'https://app.test:444/path']);
+
+it('uses fresh admitted actor facts before billing management policies', function (string $operation): void {
+    billingNativeRun(function () use ($operation): void {
+        BillingAccount::query()->forceCreate(['email' => 'billing@example.test', 'stripe_id' => 'cus_actor']);
+        $actor = Actor::query()->findOrFail(1);
+        $actor->name = 'Forged administrator';
+        app()->instance(BillingManagementAccess::class, new class implements BillingManagementAccess
+        {
+            public function assertCanManage(Authenticatable $actor, TenantId $owner): void
+            {
+                if (! $actor instanceof Actor || $actor->name !== 'Forged administrator') {
+                    throw new AuthorizationException;
+                }
+            }
+        });
+        app()->instance(BillingGateway::class, Mockery::mock(BillingGateway::class));
+        $owner = billingNativeOwner(7);
+        expect(fn () => match ($operation) {
+            'checkout' => app(BillingCheckout::class)->start($owner, $actor, 'billing@example.test', 'pro', 'monthly', 'https://app.test/success', 'https://app.test/cancel'),
+            'contact' => app(BillingContacts::class)->update($owner, $actor, 'Changed', 'changed@example.test'),
+            'portal' => app(BillingPortal::class)->url($owner, $actor, 'https://app.test/billing'),
+        })->toThrow(AuthorizationException::class);
+    });
+})->with(['checkout', 'contact', 'portal']);
 
 it('authorizes one checkout attempt and reuses its pending session', function (): void {
     billingNativeRun(function () {

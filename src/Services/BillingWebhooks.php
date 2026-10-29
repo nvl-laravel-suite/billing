@@ -39,6 +39,9 @@ final class BillingWebhooks
     /** Apply one signed Stripe event through Cashier and record its side effects. */
     public function process(string $payload, string $signature): void
     {
+        if (config('nvl-billing.enabled') !== true) {
+            throw BillingException::because(BillingResponseCode::FeatureDisabled, 'Billing is disabled.');
+        }
         $secret = config('cashier.webhook.secret');
         if (! is_string($secret) || $secret === '') {
             throw new InvalidArgumentException('A Stripe webhook signing secret is required.');

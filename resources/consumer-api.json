@@ -6,15 +6,6 @@
         "Nvl\\Billing\\Database\\Factories\\": "database/factories"
     },
     "symbols": {
-        "Nvl\\Billing\\Contracts\\BillingAccessContract": {
-            "kind": "interface",
-            "file": "src/Contracts/BillingAccessContract.php",
-            "methods": [
-                "forOwner"
-            ],
-            "properties": [],
-            "constants": []
-        },
         "Nvl\\Billing\\Contracts\\BillingGateway": {
             "kind": "interface",
             "file": "src/Contracts/BillingGateway.php",
@@ -31,15 +22,6 @@
             "file": "src/Contracts/BillingManagementAccess.php",
             "methods": [
                 "assertCanManage"
-            ],
-            "properties": [],
-            "constants": []
-        },
-        "Nvl\\Billing\\Contracts\\BillingPortalContract": {
-            "kind": "interface",
-            "file": "src/Contracts/BillingPortalContract.php",
-            "methods": [
-                "url"
             ],
             "properties": [],
             "constants": []
