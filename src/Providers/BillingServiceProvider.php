@@ -103,11 +103,11 @@ final class BillingServiceProvider extends ServiceProvider implements OwnershipI
 
         $this->publishes([
             __DIR__.'/../../config/nvl-billing.php' => config_path('nvl-billing.php'),
-        ], 'billing-config');
+        ], 'nvl-billing-config');
         $this->publishes([
             __DIR__.'/../../resources/boost/skills/nvl-billing' => base_path('.agents/skills/nvl-billing'),
-        ], 'billing-skills');
-        $this->publishesMigrations([$path => database_path('migrations')], 'billing-migrations');
+        ], 'nvl-billing-skills');
+        $this->publishesMigrations([$path => database_path('migrations')], 'nvl-billing-migrations');
 
         if (config('nvl-billing.enabled') === true && config('nvl-billing.migrations.enabled') === true) {
             $this->loadMigrationsFrom($path);
