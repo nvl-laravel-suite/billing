@@ -184,6 +184,7 @@
                 "pending_checkout_attempt_id",
                 "pending_checkout_expires_at",
                 "pending_checkout_price",
+                "pending_checkout_request_hash",
                 "pending_checkout_session_id",
                 "pending_checkout_trial_days",
                 "pending_checkout_url",

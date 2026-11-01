@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace Nvl\Billing\Console\Commands;
 
+use Exception;
 use Illuminate\Console\Command;
 use Nvl\Billing\Services\BillingModelRegistry;
 use Nvl\Billing\Services\BillingReconciler;
 use Nvl\Support\Ownership\Contracts\OwnershipReadiness;
 use Nvl\Support\Ownership\Contracts\OwnershipSystemRunner;
+use Nvl\Support\Ownership\Exceptions\OwnershipException;
 use Nvl\Support\Ownership\Exceptions\OwnershipViolation;
 use Nvl\Support\Ownership\ValueObjects\OwnerReference;
 
@@ -31,6 +33,8 @@ final class BillingReconcileCommand extends Command
             return self::SUCCESS;
         }
         $model = BillingModelRegistry::newAccount();
+        $succeeded = 0;
+        $failed = 0;
         foreach ($model->getConnection()->table($model->getTable())->useWritePdo()->whereNotNull('stripe_id')->orderBy('id')->select(['id', 'owner_scope_key', 'owner_reference'])->lazyById(100) as $row) {
             if (! is_string($row->owner_reference)) {
                 throw new OwnershipViolation;
@@ -39,9 +43,25 @@ final class BillingReconcileCommand extends Command
             if ($row->owner_scope_key !== $owner->scopeKey()) {
                 throw new OwnershipViolation;
             }
-            $runner->runSystem($owner, 'billing.reconcile', fn () => $reconciler->reconcile($owner));
-        }
+            $completed = $runner->runSystem($owner, 'billing.reconcile', static function () use ($reconciler, $owner): bool {
+                try {
+                    $reconciler->reconcile($owner);
 
-        return self::SUCCESS;
+                    return true;
+                } catch (OwnershipException $exception) {
+                    throw $exception;
+                } catch (Exception) {
+                    return false;
+                }
+            });
+            if ($completed) {
+                $succeeded++;
+            } else {
+                $failed++;
+            }
+        }
+        $this->line(json_encode(['succeeded' => $succeeded, 'failed' => $failed], JSON_THROW_ON_ERROR));
+
+        return $failed === 0 ? self::SUCCESS : self::FAILURE;
     }
 }

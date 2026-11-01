@@ -48,6 +48,7 @@ final class BillingAccountStateUpdater
                 && $account->pending_checkout_attempt_id !== null) {
                 $account->pending_checkout_attempt_id = null;
                 $account->pending_checkout_price = null;
+                $account->pending_checkout_request_hash = null;
                 $account->pending_checkout_session_id = null;
                 $account->pending_checkout_url = null;
                 $account->pending_checkout_expires_at = null;

@@ -64,19 +64,19 @@
             ],
             "producer_callers": [
                 {
-                    "path": "packages/nvl/billing/src/Actions/StartCheckoutAction.php",
+                    "path": "packages/nvl/billing/src/Services/BillingCheckout.php",
                     "publisher_method": "BillingEvents::accountChanged",
                     "arguments": "$account, 'created'",
                     "connection": "Account writer getConnection()"
                 },
                 {
-                    "path": "packages/nvl/billing/src/Actions/UpdateBillingContactAction.php",
+                    "path": "packages/nvl/billing/src/Services/BillingContacts.php",
                     "publisher_method": "BillingEvents::accountChanged",
                     "arguments": "$created, 'created'",
                     "connection": "Account writer getConnection()"
                 },
                 {
-                    "path": "packages/nvl/billing/src/Actions/UpdateBillingContactAction.php",
+                    "path": "packages/nvl/billing/src/Services/BillingContacts.php",
                     "publisher_method": "BillingEvents::accountChanged",
                     "arguments": "$account, 'contact_updated'",
                     "connection": "Account writer getConnection()"
@@ -189,7 +189,7 @@
             ],
             "producer_callers": [
                 {
-                    "path": "packages/nvl/billing/src/Actions/StartCheckoutAction.php",
+                    "path": "packages/nvl/billing/src/Services/BillingCheckout.php",
                     "publisher_method": "BillingEvents::checkoutStarted",
                     "arguments": "$account, $attempt->id, $session->id",
                     "connection": "Account writer getConnection()"
@@ -315,6 +315,6 @@
     "no_op_semantics": "Disabled Billing emits nothing. Unchanged contact/customer/subscription/item replays emit nothing. A checkout event requires the first persisted matching pending-attempt session. Webhook and reconciliation share writers; repeated cancellation preserves ends_at and emits no duplicate transition.",
     "notes": [
         "Account operation values are created, contact_updated, customer_updated, customer_deleted, trial_consumed, checkout_cleared. Subscription currentStatus and previousStatus are persisted Stripe status strings, not a new enum. Stripe calls stay outside local multi-row transactions.",
-        "BillingEvents receives calls from StartCheckoutAction, UpdateBillingContactAction, BillingCustomerSyncer, BillingAccountStateUpdater and BillingSubscriptionSyncer. BillingReconciler and signed BillingWebhookController reach these same reusable writers."
+        "BillingEvents receives calls from BillingCheckout, BillingContacts, BillingCustomerSyncer, BillingAccountStateUpdater and BillingSubscriptionSyncer. BillingReconciler and signed BillingWebhooks reach these same reusable writers."
     ]
 }

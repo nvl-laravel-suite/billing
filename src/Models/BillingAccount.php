@@ -33,6 +33,7 @@ use Nvl\Support\Ownership\Traits\HasOwnership;
  * @property Carbon|null $trial_consumed_at
  * @property string|null $pending_checkout_attempt_id
  * @property string|null $pending_checkout_price
+ * @property string|null $pending_checkout_request_hash
  * @property string|null $pending_checkout_session_id
  * @property string|null $pending_checkout_url
  * @property CarbonImmutable|null $pending_checkout_expires_at
@@ -59,6 +60,15 @@ class BillingAccount extends Model implements Ownable
 
     /** @var list<string> */
     protected $fillable = ['tenant_id', 'name', 'email'];
+
+    /** @var list<string> */
+    protected $hidden = [
+        'stripe_id',
+        'pending_checkout_attempt_id',
+        'pending_checkout_request_hash',
+        'pending_checkout_session_id',
+        'pending_checkout_url',
+    ];
 
     /** @return array<string, string> */
     protected function casts(): array

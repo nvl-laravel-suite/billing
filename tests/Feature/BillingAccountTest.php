@@ -18,3 +18,20 @@ it('owns one billable account and Cashier subscription per tenant', function ():
         expect(fn () => BillingAccount::query()->create(['email' => 'another@example.test']))->toThrow(UniqueConstraintViolationException::class);
     });
 });
+
+it('hides provider and checkout recovery capabilities from default model serialization', function (): void {
+    $sensitive = [
+        'stripe_id' => 'cus_private_account',
+        'pending_checkout_attempt_id' => (string) Str::uuid(),
+        'pending_checkout_request_hash' => hash('sha256', 'private checkout request'),
+        'pending_checkout_session_id' => 'cs_private_session',
+        'pending_checkout_url' => 'https://checkout.stripe.com/private-capability',
+    ];
+    $account = BillingAccount::factory()->make($sensitive);
+
+    expect($account->toArray())->not->toHaveKeys(array_keys($sensitive))
+        ->and(json_decode($account->toJson(), true, flags: JSON_THROW_ON_ERROR))->not->toHaveKeys(array_keys($sensitive));
+    foreach ($sensitive as $attribute => $value) {
+        expect($account->getAttribute($attribute))->toBe($value);
+    }
+});

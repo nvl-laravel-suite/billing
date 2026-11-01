@@ -5,6 +5,15 @@ All notable changes to `nvl/billing` are documented here.
 
 ## [Unreleased]
 
+### Fixed
+
+- Hide Stripe customer and Checkout recovery/capability fields from default account array/JSON serialization while retaining native service access.
+- Bind Checkout replay and recovery to the original request and gateway configuration using a forward, nullable request-hash migration; refuse unverified historical active attempts until expiry.
+- Keep enabled Billing boot and Doctor available when the webhook signing secret is missing, while webhook processing continues to fail closed.
+- Continue all-owner reconciliation after admitted operational failures, report safe JSON success/failure counts and return failure when any owner fails; retain fail-fast ownership and admission checks.
+- Complete account lifecycle storage with nullable historical tenant identities and persisted provider-deletion facts, using the canonical Billing/Core connection.
+- Report missing enforcing Ownership runtime, reviewed adoption and account lifecycle schema in Billing Doctor; document the enabled-service requirement.
+
 ## [6.0.1] - 2026-10-21
 
 ### Changed

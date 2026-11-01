@@ -4,12 +4,17 @@ declare(strict_types=1);
 
 namespace Nvl\Billing\Services;
 
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Schema;
+use JsonException;
 use Laravel\Cashier\Cashier;
 use Nvl\Billing\Catalog\PlanCatalog;
 use Nvl\Billing\Definitions\Tables\BillingTables;
 use Nvl\Billing\Exceptions\BillingException;
+use Nvl\Billing\Ownership\BillingIntegrityGuard;
 use Nvl\Support\Doctor\DoctorCheck;
+use Nvl\Support\Ownership\Exceptions\OwnershipException;
+use Nvl\Support\Ownership\Services\OwnershipResourceRegistry;
 
 /**
  * Checks the optional Billing package's deployment readiness.
@@ -18,6 +23,9 @@ use Nvl\Support\Doctor\DoctorCheck;
  */
 final class BillingDoctor
 {
+    /** Inspect native readiness without admitting an owner or depending on the optional runtime. */
+    public function __construct(private readonly OwnershipResourceRegistry $resources, private readonly BillingIntegrityGuard $integrity) {}
+
     /** @return list<DoctorCheck> */
     public function adoptionChecks(): array
     {
@@ -45,6 +53,7 @@ final class BillingDoctor
             'webhook_secret' => is_string(config('cashier.webhook.secret')) && config('cashier.webhook.secret') !== '',
             'return_hosts' => is_array(config('nvl-billing.checkout.return_hosts')) && config('nvl-billing.checkout.return_hosts') !== [],
             'cashier_customer_model' => config('nvl-billing.adoption.cashier_models') !== true || Cashier::$customerModel === BillingModelRegistry::accountClass(),
+            'ownership_runtime' => ! $enabled || (config('nvl-ownership.enabled') === true && $this->resources->get('billing.accounts')->ownership->strategy !== 'unscoped'),
         ];
 
         try {
@@ -58,6 +67,18 @@ final class BillingDoctor
         $connection = is_string($configuredConnection) ? $configuredConnection : null;
         foreach ([BillingTables::get(BillingTables::Accounts), BillingTables::get(BillingTables::Subscriptions), BillingTables::get(BillingTables::SubscriptionItems), BillingTables::get(BillingTables::WebhookEvents)] as $table) {
             $checks[$table] = ! $enabled || Schema::connection($connection)->hasTable($table);
+        }
+        $accounts = BillingTables::get(BillingTables::Accounts);
+        $checks['account_lifecycle_schema'] = ! $enabled || ($checks[$accounts] && Schema::connection($connection)->hasColumn($accounts, 'provider_deleted_at'));
+        $checks['checkout_request_schema'] = ! $enabled || ($checks[$accounts] && Schema::connection($connection)->hasColumn($accounts, 'pending_checkout_request_hash'));
+        $checks['ownership_adoption'] = ! $enabled;
+        if ($enabled && $checks['ownership_runtime']) {
+            try {
+                $this->integrity->assertReady();
+                $checks['ownership_adoption'] = true;
+            } catch (OwnershipException|QueryException|JsonException) {
+                $checks['ownership_adoption'] = false;
+            }
         }
 
         $healthy = ! $enabled || ! in_array(false, $checks, true);

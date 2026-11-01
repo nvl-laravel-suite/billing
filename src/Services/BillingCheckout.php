@@ -39,11 +39,11 @@ final readonly class BillingCheckout
     ) {}
 
     /**
-     * Start or return the existing Checkout for one owner and Price.
+     * Start or recover the same owner's immutable Checkout request.
      *
      * @return CheckoutSession
      *
-     * @throws DomainException When the tenant has a subscription or a different pending Price
+     * @throws DomainException When the owner has a subscription or a different pending request
      * @throws InvalidArgumentException When checkout input is invalid
      */
     public function start(
@@ -73,7 +73,7 @@ final readonly class BillingCheckout
         $price = $this->catalog->priceFor($plan, $interval);
         $account = $this->accountFor($owner, $billingEmail);
         $attempt = DB::connection($account->getConnectionName())->transaction(
-            fn (): array => $this->reserveAttempt($account, $price),
+            fn (): array => $this->reserveAttempt($account, $price, ['email' => $billingEmail, 'plan' => $plan, 'interval' => $interval, 'successUrl' => $successUrl, 'cancelUrl' => $cancelUrl]),
         );
 
         if ($attempt['session'] !== null) {
@@ -124,9 +124,10 @@ final readonly class BillingCheckout
     }
 
     /** Reserve or recover an attempt while the owner account row is locked.
+     * @param  array{email:string,plan:string,interval:string,successUrl:string,cancelUrl:string}  $request
      * @return array{account: BillingAccount, id: string, price: string, trialDays: int, expiresAt: CarbonImmutable, session: CheckoutSession|null}
      */
-    private function reserveAttempt(BillingAccount $account, string $price): array
+    private function reserveAttempt(BillingAccount $account, string $price, array $request): array
     {
         $account = BillingModelRegistry::accountQuery()->whereKey($account->id)->lockForUpdate()->firstOrFail();
         $type = config('nvl-billing.subscription_type', 'default');
@@ -151,6 +152,10 @@ final readonly class BillingCheckout
             if ($account->pending_checkout_price !== $price) {
                 throw BillingException::because(BillingResponseCode::CheckoutConflict, 'A Checkout for another plan is already pending.');
             }
+            $requestHash = $this->requestHash($account, $price, $account->pending_checkout_trial_days ?? 0, $expiry, $type, $request);
+            if ($account->pending_checkout_request_hash === null || ! hash_equals($account->pending_checkout_request_hash, $requestHash)) {
+                throw BillingException::because(BillingResponseCode::CheckoutConflict, 'A Checkout with different or unverified request inputs is already pending; retry its original inputs or wait for expiry.');
+            }
 
             $session = $account->pending_checkout_session_id !== null && $account->pending_checkout_url !== null
                 ? ['id' => $account->pending_checkout_session_id, 'url' => $account->pending_checkout_url, 'expiresAt' => $expiry]
@@ -159,18 +164,43 @@ final readonly class BillingCheckout
             return ['account' => $account, 'id' => $account->pending_checkout_attempt_id, 'price' => $price, 'trialDays' => $account->pending_checkout_trial_days ?? 0, 'expiresAt' => $expiry, 'session' => $session];
         }
 
-        $expiresAt = CarbonImmutable::now()->addHours(2);
+        $expiresAt = CarbonImmutable::now()->addHours(2)->startOfSecond();
         $attemptId = (string) Str::uuid();
+        $trialDays = $this->trialDays($account);
         $account->forceFill([
             'pending_checkout_attempt_id' => $attemptId,
             'pending_checkout_price' => $price,
             'pending_checkout_expires_at' => $expiresAt,
-            'pending_checkout_trial_days' => $this->trialDays($account),
+            'pending_checkout_trial_days' => $trialDays,
+            'pending_checkout_request_hash' => $this->requestHash($account, $price, $trialDays, $expiresAt, $type, $request),
             'pending_checkout_session_id' => null,
             'pending_checkout_url' => null,
         ])->save();
 
         return ['account' => $account, 'id' => $attemptId, 'price' => $price, 'trialDays' => $account->pending_checkout_trial_days ?? 0, 'expiresAt' => $expiresAt, 'session' => null];
+    }
+
+    /**
+     * Frame immutable request and gateway configuration inputs without retaining URLs.
+     * The provider may create stripe_id while recovering this same account/attempt.
+     *
+     * @param  array{email:string,plan:string,interval:string,successUrl:string,cancelUrl:string}  $request
+     */
+    private function requestHash(BillingAccount $account, string $price, int $trialDays, CarbonImmutable $expiresAt, string $subscriptionType, array $request): string
+    {
+        return hash('sha256', serialize([
+            'version' => 1,
+            'owner' => $account->owner_scope_key,
+            'account' => $account->id,
+            'tenant' => $account->tenant_id,
+            'contact' => ['email' => $account->email, 'name' => $account->name],
+            'request' => $request,
+            'price' => $price,
+            'trialDays' => $trialDays,
+            'expiresAt' => $expiresAt->timestamp,
+            'subscriptionType' => $subscriptionType,
+            'requirePaymentMethod' => config('nvl-billing.trial.require_payment_method') !== false,
+        ]));
     }
 
     /** Grant the configured free trial only to a tenant that has not used one. */

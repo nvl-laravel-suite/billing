@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Nvl\Billing\Contracts\BillingManagementAccess;
 use Nvl\Billing\Definitions\Tables\BillingTables;
+use Nvl\Billing\Exceptions\BillingException;
 use Nvl\Billing\Models\BillingAccount;
 use Nvl\Billing\Models\BillingWebhookEvent;
 use Nvl\Billing\Services\BillingCheckout;
@@ -22,7 +23,7 @@ use Nvl\Support\Ownership\ValueObjects\OwnerReference;
 
 uses(LegacyOwnerScopeTestCase::class);
 
-it('reuses the exact pending legacy provider attempt and customer after native activation', function (): void {
+it('preserves but refuses an unverified pending legacy attempt after native activation', function (): void {
     $gateway = FakeBillingGateway::fake(app())->willReturn('checkout', ['id' => 'cs_recovered', 'url' => 'https://example.test/recovered', 'expiresAt' => CarbonImmutable::now()->addHour()]);
     app()->bind(BillingManagementAccess::class, fn () => new class implements BillingManagementAccess
     {
@@ -31,11 +32,12 @@ it('reuses the exact pending legacy provider attempt and customer after native a
     app(OwnershipRunner::class)->run(Company::query()->findOrFail(7), Actor::query()->findOrFail(1), function () use ($gateway): void {
         $owner = app(OwnershipContext::class)->requireOwner();
         foreach ([1, 2] as $retry) {
-            expect(app(BillingCheckout::class)->start($owner, Actor::query()->findOrFail(1), 'legacy@example.test', 'pro', 'monthly', 'https://example.test/success', 'https://example.test/cancel')['id'])->toBe('cs_recovered');
+            expect(fn () => app(BillingCheckout::class)->start($owner, Actor::query()->findOrFail(1), 'legacy@example.test', 'pro', 'monthly', 'https://example.test/success', 'https://example.test/cancel'))
+                ->toThrow(BillingException::class, 'unverified');
         }
-        $gateway->assertCalled('checkout', times: 1);
-        $calls = $gateway->calls('checkout');
-        expect($calls[0]->arguments['attemptId'])->toBe(LegacyOwnerScopeTestCase::Attempt)
+        $gateway->assertCalled('checkout', times: 0);
+        expect(BillingAccount::query()->sole()->pending_checkout_attempt_id)->toBe(LegacyOwnerScopeTestCase::Attempt)
+            ->and(BillingAccount::query()->sole()->pending_checkout_request_hash)->toBeNull()
             ->and(BillingAccount::query()->sole()->stripe_id)->toBe('cus_cutover')
             ->and(BillingAccount::query()->sole()->id)->toBe(LegacyOwnerScopeTestCase::Account)
             ->and(BillingAccount::query()->sole()->getAttribute('tenant_id'))->toBe(LegacyOwnerScopeTestCase::Tenant);

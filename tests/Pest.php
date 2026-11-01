@@ -2,16 +2,18 @@
 
 declare(strict_types=1);
 
-require_once __DIR__.'/BillingTestCase.php';
-
 use Nvl\Billing\Tests\BillingTestCase;
 use Nvl\Ownership\Services\OwnerIdentityResolver;
 use Nvl\Ownership\Services\OwnershipRunner;
 use Nvl\Ownership\Tests\Fixtures\Actor;
 use Nvl\Ownership\Tests\Fixtures\Company;
+use Nvl\Ownership\Tests\OwnershipTestCase;
 use Nvl\Support\Ownership\ValueObjects\OwnerReference;
 
-uses(BillingTestCase::class)->in(__DIR__.'/Feature');
+if (class_exists(OwnershipTestCase::class)) {
+    require_once __DIR__.'/BillingTestCase.php';
+    uses(BillingTestCase::class)->in(__DIR__.'/Feature');
+}
 
 /** Run each existing feature scenario inside a real admitted owner. */
 function billingNativeRun(Closure $callback): void

@@ -7,16 +7,15 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Schema\Builder;
 use Illuminate\Support\Facades\Schema;
 use Nvl\Billing\Definitions\Tables\BillingTables;
+use Nvl\Support\Config\PackageStorage;
 
-/** Creates the opt-in tenant billing account and Cashier subscription stores. */
+/** Creates the opt-in billing account and Cashier subscription stores. */
 return new class extends Migration
 {
-    /** Use the central tenant directory connection for all billing records. */
+    /** Use the canonical package connection for every native billing record. */
     public function getConnection(): ?string
     {
-        $configured = config('nvl-billing.connection') ?? config('nvl-tenancy.connection');
-
-        return is_string($configured) ? $configured : null;
+        return PackageStorage::connection('billing');
     }
 
     /** Create UUID-backed Cashier tables without changing a consumer's users table. */

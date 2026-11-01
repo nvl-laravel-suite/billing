@@ -12,8 +12,6 @@ use Nvl\Billing\Console\Commands\BillingReconcileCommand;
 use Nvl\Billing\Contracts\BillingGateway;
 use Nvl\Billing\Contracts\BillingManagementAccess;
 use Nvl\Billing\Contracts\SubscriptionReader;
-use Nvl\Billing\Enums\BillingResponseCode;
-use Nvl\Billing\Exceptions\BillingException;
 use Nvl\Billing\Models\BillingSubscriptionItem;
 use Nvl\Billing\Ownership\BillingAdoptionAdapter;
 use Nvl\Billing\Ownership\BillingResourceRegistrar;
@@ -84,10 +82,6 @@ final class BillingServiceProvider extends ServiceProvider implements OwnershipI
         $this->commands([BillingDoctorCommand::class, BillingReconcileCommand::class]);
 
         if (config('nvl-billing.enabled') === true) {
-            if (! is_string(config('cashier.webhook.secret')) || config('cashier.webhook.secret') === '') {
-                throw BillingException::because(BillingResponseCode::InvalidConfiguration, 'A Stripe webhook signing secret is required when Billing is enabled.');
-            }
-
             if (config('nvl-billing.adoption.cashier_models') === true) {
                 Cashier::useCustomerModel(BillingModelRegistry::accountClass());
                 Cashier::useSubscriptionModel(BillingModelRegistry::subscriptionClass());

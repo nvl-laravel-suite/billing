@@ -26,7 +26,7 @@ Disabled Billing emits nothing. Unchanged contact/customer/subscription/item rep
 
 Account operation values are created, contact_updated, customer_updated, customer_deleted, trial_consumed, checkout_cleared. Subscription currentStatus and previousStatus are persisted Stripe status strings, not a new enum. Stripe calls stay outside local multi-row transactions.
 
-BillingEvents receives calls from StartCheckoutAction, UpdateBillingContactAction, BillingCustomerSyncer, BillingAccountStateUpdater and BillingSubscriptionSyncer. BillingReconciler and signed BillingWebhookController reach these same reusable writers.
+BillingEvents receives calls from BillingCheckout, BillingContacts, BillingCustomerSyncer, BillingAccountStateUpdater and BillingSubscriptionSyncer. BillingReconciler and signed BillingWebhooks reach these same reusable writers.
 
 Actor/owner identifiers do not grant access. Listeners must preserve the captured ownership and apply their own authorization when reading storage. Readonly payload fields and native value objects are schema facts; public constructors with mixed arrays do not create a new recursive sanitization boundary. Package producer shapes are documented below; hosts must not attach models, mutable service objects or private arbitrary data.
 
@@ -72,9 +72,9 @@ Publisher callers (the publisher above supplies the exact model connection):
 
 | Caller | Boundary |
 | --- | --- |
-| [Actions/StartCheckoutAction.php](../src/Actions/StartCheckoutAction.php) | `BillingEvents::accountChanged` |
-| [Actions/UpdateBillingContactAction.php](../src/Actions/UpdateBillingContactAction.php) | `BillingEvents::accountChanged` |
-| [Actions/UpdateBillingContactAction.php](../src/Actions/UpdateBillingContactAction.php) | `BillingEvents::accountChanged` |
+| [Services/BillingCheckout.php](../src/Services/BillingCheckout.php) | `BillingEvents::accountChanged` |
+| [Services/BillingContacts.php](../src/Services/BillingContacts.php) | `BillingEvents::accountChanged` |
+| [Services/BillingContacts.php](../src/Services/BillingContacts.php) | `BillingEvents::accountChanged` |
 | [Services/BillingAccountStateUpdater.php](../src/Services/BillingAccountStateUpdater.php) | `BillingEvents::accountChanged` |
 | [Services/BillingAccountStateUpdater.php](../src/Services/BillingAccountStateUpdater.php) | `BillingEvents::accountChanged` |
 | [Services/BillingCustomerSyncer.php](../src/Services/BillingCustomerSyncer.php) | `BillingEvents::accountChanged` |
@@ -116,7 +116,7 @@ Publisher callers (the publisher above supplies the exact model connection):
 
 | Caller | Boundary |
 | --- | --- |
-| [Actions/StartCheckoutAction.php](../src/Actions/StartCheckoutAction.php) | `BillingEvents::checkoutStarted` |
+| [Services/BillingCheckout.php](../src/Services/BillingCheckout.php) | `BillingEvents::checkoutStarted` |
 
 ### BillingSubscriptionChanged
 
