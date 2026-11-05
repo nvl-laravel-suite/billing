@@ -5,6 +5,10 @@ All notable changes to `nvl/billing` are documented here.
 
 ## [Unreleased]
 
+### Fixed
+
+- Fetch every Stripe subscription-item page before webhook synchronization or reconciliation treats the provider snapshot as complete, preserving items omitted from an embedded first page.
+
 ## [7.0.0] - 2026-11-03
 
 - Adopt the reviewed NVL 7 family for PHP 8.4+ and Laravel 13, with compatible required and optional NVL peers. Review the package upgrade guide before deployment.

@@ -47,8 +47,48 @@ it('configures a cardless trial and delegates portal and contact updates to Stri
 it('pages Stripe subscriptions into reconciliation payloads', function (): void {
     billingNativeRun(function () {
         $requests = [];
-        billingStripeHttp([['object' => 'list', 'data' => [['object' => 'subscription', 'id' => 'sub_first', 'customer' => 'cus_existing', 'status' => 'active'], ['object' => 'subscription', 'id' => 'sub_second', 'customer' => 'cus_existing', 'status' => 'canceled']], 'has_more' => false, 'url' => '/v1/subscriptions']], $requests);
+        billingStripeHttp([
+            ['object' => 'list', 'data' => [['object' => 'subscription', 'id' => 'sub_first', 'customer' => 'cus_existing', 'status' => 'active']], 'has_more' => true, 'url' => '/v1/subscriptions'],
+            ['object' => 'list', 'data' => [['object' => 'subscription', 'id' => 'sub_second', 'customer' => 'cus_existing', 'status' => 'canceled']], 'has_more' => false, 'url' => '/v1/subscriptions'],
+        ], $requests);
         $subscriptions = app(StripeSubscriptionReader::class)->forCustomer('cus_existing');
-        expect(array_column($subscriptions, 'id'))->toBe(['sub_first', 'sub_second'])->and($requests[0]['url'])->toStartWith('https://api.stripe.com/v1/subscriptions')->and($requests[0]['parameters'])->toBe(['customer' => 'cus_existing', 'status' => 'all', 'limit' => 100]);
+        expect(array_column($subscriptions, 'id'))->toBe(['sub_first', 'sub_second'])
+            ->and($requests[0]['url'])->toStartWith('https://api.stripe.com/v1/subscriptions')
+            ->and($requests[0]['parameters'])->toBe(['customer' => 'cus_existing', 'status' => 'all', 'limit' => 100])
+            ->and($requests[1]['parameters'])->toBe(['customer' => 'cus_existing', 'status' => 'all', 'limit' => 100, 'starting_after' => 'sub_first']);
+    });
+});
+
+it('reads complete Stripe subscription items before returning reconciliation payloads', function (): void {
+    billingNativeRun(function (): void {
+        $first = ['object' => 'subscription_item', 'id' => 'si_first', 'price' => ['id' => 'price_pro', 'product' => 'prod_pro'], 'quantity' => 1];
+        $second = ['object' => 'subscription_item', 'id' => 'si_second', 'price' => ['id' => 'price_extra', 'product' => 'prod_extra'], 'quantity' => 2];
+        $third = ['object' => 'subscription_item', 'id' => 'si_third', 'price' => ['id' => 'price_other', 'product' => 'prod_other'], 'quantity' => 3];
+        $requests = [];
+        billingStripeHttp([
+            [
+                'object' => 'list',
+                'data' => [[
+                    'object' => 'subscription',
+                    'id' => 'sub_existing',
+                    'customer' => 'cus_existing',
+                    'status' => 'active',
+                    'items' => ['object' => 'list', 'data' => [$first], 'has_more' => true, 'url' => '/v1/subscription_items?subscription=sub_existing'],
+                ]],
+                'has_more' => false,
+                'url' => '/v1/subscriptions',
+            ],
+            ['object' => 'list', 'data' => [$first, $second], 'has_more' => true, 'url' => '/v1/subscription_items'],
+            ['object' => 'list', 'data' => [$third], 'has_more' => false, 'url' => '/v1/subscription_items'],
+        ], $requests);
+
+        $subscriptions = app(StripeSubscriptionReader::class)->forCustomer('cus_existing');
+
+        expect($subscriptions)->toHaveCount(1)
+            ->and($subscriptions[0]['items']['data'])->toEqual([$first, $second, $third])
+            ->and($subscriptions[0]['items']['has_more'])->toBeFalse()
+            ->and($requests[1]['url'])->toStartWith('https://api.stripe.com/v1/subscription_items')
+            ->and($requests[1]['parameters'])->toBe(['subscription' => 'sub_existing', 'limit' => 100])
+            ->and($requests[2]['parameters'])->toBe(['subscription' => 'sub_existing', 'limit' => 100, 'starting_after' => 'si_second']);
     });
 });

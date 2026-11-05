@@ -12,7 +12,7 @@ namespace Nvl\Billing\Contracts;
 interface SubscriptionReader
 {
     /**
-     * Return all current and historical Stripe subscription objects.
+     * Return all current and historical Stripe subscription objects with complete item lists.
      *
      * @return list<array<string, mixed>>
      */
