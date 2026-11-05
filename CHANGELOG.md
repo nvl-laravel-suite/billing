@@ -5,9 +5,17 @@ All notable changes to `nvl/billing` are documented here.
 
 ## [Unreleased]
 
+## [7.0.1] - 2026-11-05
+
 ### Fixed
 
 - Fetch every Stripe subscription-item page before webhook synchronization or reconciliation treats the provider snapshot as complete, preserving items omitted from an embedded first page.
+
+<!-- NVL GENERATED CHANGES START -->
+### Changed
+
+- load complete Stripe subscription items
+<!-- NVL GENERATED CHANGES END -->
 
 ## [7.0.0] - 2026-11-03
 
