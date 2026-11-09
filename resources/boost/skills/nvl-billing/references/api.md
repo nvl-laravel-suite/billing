@@ -184,7 +184,9 @@ public function translationParameters(): array
 ```text
 class Nvl\Billing\Models\BillingAccount extends Illuminate\Database\Eloquent\Model implements Nvl\Support\Ownership\Contracts\Ownable
 public const string TABLE=\Nvl\Billing\Definitions\Tables\BillingTables::Accounts
-public function delete(): ?bool
+public function delete(): mixed
+@return ($this is Pivot ? (bool | int | null) : (bool | null))
+resolved @return ($this is Illuminate\Database\Eloquent\Relations\Pivot ? (bool | int | null) : (bool | null))
 public function fresh(mixed $with=[]): ?static
 @param (array<array-key, mixed> | string) $with
 public function getConnectionName(): ?string
@@ -231,7 +233,9 @@ public const string TABLE=\Nvl\Billing\Definitions\Tables\BillingTables::Subscri
 public function billingAccount(): Illuminate\Database\Eloquent\Relations\BelongsTo
 @return BelongsTo<BillingAccount, $this>
 resolved @return Illuminate\Database\Eloquent\Relations\BelongsTo<Nvl\Billing\Models\BillingAccount, $this>
-public function delete(): ?bool
+public function delete(): mixed
+@return ($this is Pivot ? (bool | int | null) : (bool | null))
+resolved @return ($this is Illuminate\Database\Eloquent\Relations\Pivot ? (bool | int | null) : (bool | null))
 public function fresh(mixed $with=[]): ?static
 @param (array<array-key, mixed> | string) $with
 public function getConnectionName(): ?string
@@ -273,7 +277,9 @@ public const string TABLE=\Nvl\Billing\Definitions\Tables\BillingTables::Subscri
 public function billingSubscription(): Illuminate\Database\Eloquent\Relations\BelongsTo
 @return BelongsTo<BillingSubscription, $this>
 resolved @return Illuminate\Database\Eloquent\Relations\BelongsTo<Nvl\Billing\Models\BillingSubscription, $this>
-public function delete(): ?bool
+public function delete(): mixed
+@return ($this is Pivot ? (bool | int | null) : (bool | null))
+resolved @return ($this is Illuminate\Database\Eloquent\Relations\Pivot ? (bool | int | null) : (bool | null))
 public function fresh(mixed $with=[]): ?static
 @param (array<array-key, mixed> | string) $with
 public function getConnectionName(): ?string
