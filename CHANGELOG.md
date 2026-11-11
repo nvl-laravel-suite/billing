@@ -5,6 +5,8 @@ All notable changes to `nvl/billing` are documented here.
 
 ## [Unreleased]
 
+## [7.0.3] - 2026-11-11
+
 ### Fixed
 
 - Store Stripe subscription timestamps (`trial_ends_at`, `ends_at`) as the correct instant when `app.timezone` is not UTC; they were previously shifted by the UTC offset, ending access and trials early. Rows written before this fix are corrected by the next subscription sync or reconciliation.
@@ -12,6 +14,12 @@ All notable changes to `nvl/billing` are documented here.
 - Enabled Billing suppresses Cashier's own routes by default, so Stripe cannot be answered by Cashier's `/stripe/webhook` controller and default customer model. Set `nvl-billing.adoption.keep_cashier_routes` to keep them; Doctor then warns with `adoption.cashier_webhook_route`. `adoption.cashier_routes` keeps its meaning.
 - Two near-simultaneous subscription events for the same subscription are both acknowledged: the later callback re-reads current provider facts after the first commits (at most three provider reads) instead of answering Stripe with `reconciliation_required`.
 - The account lifecycle and Checkout identity migrations can be rolled back, so `migrate:rollback`, `migrate:refresh` and the `DatabaseMigrations` test trait no longer fail; production still refuses while the accounts table holds rows.
+
+<!-- NVL GENERATED CHANGES START -->
+### Changed
+
+- correct order customer updates, routes and migration rollbacks
+<!-- NVL GENERATED CHANGES END -->
 
 ## [7.0.2] - 2026-11-09
 
