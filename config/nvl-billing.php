@@ -9,7 +9,7 @@ use Nvl\Billing\Models\BillingSubscription;
 return [
     'models' => ['account' => BillingAccount::class, 'subscription' => BillingSubscription::class],
     'ownership' => ['scoped' => true],
-    'adoption' => ['cashier_models' => false, 'cashier_routes' => false],
+    'adoption' => ['cashier_models' => false, 'cashier_routes' => false, 'keep_cashier_routes' => false],
     'enabled' => false,
     'connection' => null,
     'migrations' => ['enabled' => false],

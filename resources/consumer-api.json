@@ -188,6 +188,7 @@
                 "pending_checkout_session_id",
                 "pending_checkout_trial_days",
                 "pending_checkout_url",
+                "provider_customer_updated_at",
                 "provider_deleted_at",
                 "stripe_id",
                 "tenant_id",

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Foundation\Auth\User;
+use Illuminate\Support\Facades\Route;
 use Laravel\Cashier\Cashier;
 use Laravel\Cashier\Subscription;
 use Laravel\Cashier\SubscriptionItem;
@@ -10,6 +11,8 @@ use Nvl\Billing\Models\BillingAccount;
 use Nvl\Billing\Models\BillingSubscription;
 use Nvl\Billing\Models\BillingSubscriptionItem;
 use Nvl\Billing\Providers\BillingServiceProvider;
+use Nvl\Billing\Services\BillingDoctor;
+use Nvl\Support\Doctor\DoctorCheck;
 use Orchestra\Testbench\TestCase;
 
 uses(TestCase::class);
@@ -44,8 +47,42 @@ it('adopts Cashier models independently of routes and NVL webhook ingress', func
     expect(Cashier::$customerModel)->toBe(BillingAccount::class)
         ->and(Cashier::$subscriptionModel)->toBe(BillingSubscription::class)
         ->and(Cashier::$subscriptionItemModel)->toBe(BillingSubscriptionItem::class)
-        ->and(Cashier::$registersRoutes)->toBeTrue()
+        ->and(Cashier::$registersRoutes)->toBeFalse()
         ->and(app('router')->has('nvl.billing.webhook'))->toBeFalse();
+});
+
+it('suppresses Cashier routes by default once Billing is enabled and keeps them only on request', function (): void {
+    config(['nvl-billing.enabled' => true]);
+    (new BillingServiceProvider(app()))->register();
+    expect(Cashier::$registersRoutes)->toBeFalse();
+
+    Cashier::$registersRoutes = true;
+    config(['nvl-billing.adoption.keep_cashier_routes' => true]);
+    (new BillingServiceProvider(app()))->register();
+    expect(Cashier::$registersRoutes)->toBeTrue();
+
+    config(['nvl-billing.adoption.cashier_routes' => true]);
+    (new BillingServiceProvider(app()))->register();
+    expect(Cashier::$registersRoutes)->toBeFalse();
+});
+
+it('reports a Cashier webhook route registered next to enabled Billing', function (): void {
+    $finding = static fn (): DoctorCheck => collect(app(BillingDoctor::class)->adoptionChecks())
+        ->firstOrFail(static fn (DoctorCheck $check): bool => $check->key === 'adoption.cashier_webhook_route');
+    (new BillingServiceProvider(app()))->register();
+
+    config(['nvl-billing.enabled' => true]);
+    expect($finding()->passed)->toBeTrue();
+
+    Route::post('stripe/webhook', static fn (): string => 'cashier')->name('cashier.webhook');
+    app('router')->getRoutes()->refreshNameLookups();
+
+    expect($finding()->passed)->toBeFalse()
+        ->and($finding()->severity)->toBe('warning')
+        ->and($finding()->message)->toContain('BillingWebhooks');
+
+    config(['nvl-billing.enabled' => false]);
+    expect($finding()->passed)->toBeTrue();
 });
 
 it('suppresses Cashier routes only through explicit route adoption', function (): void {

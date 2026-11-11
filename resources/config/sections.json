@@ -5,6 +5,7 @@
             "common": [
                 "adoption.cashier_models",
                 "adoption.cashier_routes",
+                "adoption.keep_cashier_routes",
                 "checkout.return_hosts",
                 "connection",
                 "enabled",

@@ -27,6 +27,7 @@ use Nvl\Support\Ownership\Traits\HasOwnership;
  * @property string $owner_scope_key
  * @property string|null $owner_reference
  * @property CarbonImmutable|null $provider_deleted_at
+ * @property CarbonImmutable|null $provider_customer_updated_at
  * @property string|null $name
  * @property string $email
  * @property string|null $stripe_id
@@ -76,6 +77,7 @@ class BillingAccount extends Model implements Ownable
         return [
             'trial_consumed_at' => 'datetime',
             'provider_deleted_at' => 'immutable_datetime',
+            'provider_customer_updated_at' => 'immutable_datetime',
             'trial_ends_at' => 'datetime',
             'pending_checkout_expires_at' => 'immutable_datetime',
             'pending_checkout_trial_days' => 'integer',

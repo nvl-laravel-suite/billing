@@ -33,9 +33,20 @@ return new class extends Migration
         }
     }
 
-    /** Retain native accounts and provider-deletion facts; retirement requires a reviewed forward migration. */
+    /**
+     * Remove the provider-deletion fact. Production refuses while accounts exist, because the
+     * facts cannot be recovered; `tenant_id` stays nullable so native accounts remain valid.
+     */
     public function down(): void
     {
-        throw new RuntimeException('Billing account lifecycle storage requires a reviewed retirement migration.');
+        $schema = Schema::connection($this->getConnection());
+        $table = BillingTables::get(BillingTables::Accounts);
+        if (! $schema->hasTable($table) || ! $schema->hasColumn($table, 'provider_deleted_at')) {
+            return;
+        }
+        if (app()->isProduction() && $schema->getConnection()->table($table)->exists()) {
+            throw new RuntimeException('Billing account lifecycle storage holds accounts; rolling it back in production requires a reviewed retirement migration.');
+        }
+        $schema->table($table, static fn (Blueprint $table) => $table->dropColumn('provider_deleted_at'));
     }
 };

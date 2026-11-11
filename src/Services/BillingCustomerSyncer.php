@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Nvl\Billing\Services;
 
+use Carbon\CarbonImmutable;
+
 /**
  * Persists signed provider customer changes through atomic local write boundaries.
  *
@@ -14,8 +16,13 @@ final readonly class BillingCustomerSyncer
     /** Reuse the same subscription writer and committed fact publisher. */
     public function __construct(private BillingSubscriptionSyncer $subscriptions, private BillingEvents $events) {}
 
-    /** @param array<string, mixed> $customer */
-    public function updateCustomer(array $customer): void
+    /**
+     * Apply a customer update unless a newer provider event was already applied.
+     *
+     * @param  array<string, mixed>  $customer
+     * @param  int|null  $eventCreatedAt  The signed event's provider `created` Unix time
+     */
+    public function updateCustomer(array $customer, ?int $eventCreatedAt = null): void
     {
         $id = $customer['id'] ?? null;
         if (! is_string($id)) {
@@ -35,11 +42,21 @@ final readonly class BillingCustomerSyncer
             $changes['email'] = $customer['email'];
         }
         if ($changes !== []) {
-            $account->getConnection()->transaction(function () use ($account, $changes): void {
+            $account->getConnection()->transaction(function () use ($account, $changes, $eventCreatedAt): void {
                 $account->setRawAttributes($account->newQuery()->whereKey($account->getKey())->lockForUpdate()->firstOrFail()->getAttributes(), true);
+                $appliedAt = $account->provider_customer_updated_at?->getTimestamp();
+                if ($appliedAt !== null && ($eventCreatedAt === null || $eventCreatedAt < $appliedAt)) {
+                    return;
+                }
                 $account->forceFill($changes);
-                if ($account->isDirty(array_keys($changes))) {
+                $contactChanged = $account->isDirty(array_keys($changes));
+                if ($eventCreatedAt !== null) {
+                    $account->provider_customer_updated_at = CarbonImmutable::createFromTimestamp($eventCreatedAt, date_default_timezone_get());
+                }
+                if ($account->isDirty()) {
                     $account->save();
+                }
+                if ($contactChanged) {
                     $this->events->accountChanged($account, 'customer_updated');
                 }
             });

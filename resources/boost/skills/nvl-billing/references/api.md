@@ -217,6 +217,8 @@ resolved @property (Carbon\CarbonImmutable | null) $pending_checkout_expires_at
 @property (string | null) $pending_checkout_session_id
 @property (int | null) $pending_checkout_trial_days
 @property (string | null) $pending_checkout_url
+@property (CarbonImmutable | null) $provider_customer_updated_at
+resolved @property (Carbon\CarbonImmutable | null) $provider_customer_updated_at
 @property (CarbonImmutable | null) $provider_deleted_at
 resolved @property (Carbon\CarbonImmutable | null) $provider_deleted_at
 @property (string | null) $stripe_id

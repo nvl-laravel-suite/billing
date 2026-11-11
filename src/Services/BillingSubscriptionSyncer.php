@@ -178,11 +178,11 @@ final class BillingSubscriptionSyncer
         return null;
     }
 
-    /** Convert a Stripe Unix timestamp into an immutable date. */
+    /** Convert a Stripe Unix timestamp into the same instant in the application timezone, which Eloquent stores. */
     private function timestamp(mixed $value): ?CarbonImmutable
     {
         return is_int($value) && $value > 0
-            ? CarbonImmutable::createFromTimestamp($value)
+            ? CarbonImmutable::createFromTimestamp($value, date_default_timezone_get())
             : null;
     }
 }

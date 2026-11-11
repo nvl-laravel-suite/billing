@@ -53,7 +53,8 @@ final class BillingServiceProvider extends ServiceProvider implements OwnershipI
         $this->mergePackageConfiguration(__DIR__.'/../../config/nvl-billing.php', 'billing');
         $this->app->singleton(BillingModelRegistry::class);
         $this->app->booting(fn () => $this->app->make(BillingModelRegistry::class)->prepare());
-        if (config('nvl-billing.adoption.cashier_routes') === true) {
+        if (config('nvl-billing.adoption.cashier_routes') === true
+            || (config('nvl-billing.enabled') === true && config('nvl-billing.adoption.keep_cashier_routes') !== true)) {
             Cashier::ignoreRoutes();
         }
         $this->app->booted(function (): void {

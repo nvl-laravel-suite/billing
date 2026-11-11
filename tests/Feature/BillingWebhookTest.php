@@ -89,6 +89,30 @@ it('syncs a scheduled cancellation from the canonical provider reader', function
         expect($account->subscriptions()->first()->ends_at?->timestamp)->toBe($periodEnd);
     });
 });
+it('stores provider timestamps as the same instant when the application timezone is not UTC', function (): void {
+    $timezone = date_default_timezone_get();
+    config(['app.timezone' => 'Europe/Sofia']);
+    date_default_timezone_set('Europe/Sofia');
+
+    try {
+        billingNativeRun(function (): void {
+            $account = BillingAccount::query()->forceCreate(['email' => 'zone@example.test', 'stripe_id' => 'cus_zone']);
+            $cancelAt = now()->addHour()->timestamp;
+            $trialEnd = now()->addMinutes(30)->timestamp;
+            $current = ['id' => 'sub_zone', 'customer' => 'cus_zone', 'status' => 'trialing', 'cancel_at' => $cancelAt, 'trial_end' => $trialEnd, 'metadata' => ['type' => 'default'], 'items' => ['data' => [['id' => 'si_zone', 'price' => ['id' => 'price_pro', 'product' => 'prod_pro'], 'quantity' => 1]]]];
+            billingCurrentSubscription($current);
+            billingSignedSubscription('evt_zone', 'customer.subscription.updated', $current);
+            $subscription = $account->subscriptions()->sole();
+
+            expect($subscription->ends_at?->timestamp)->toBe($cancelAt)
+                ->and($subscription->trial_ends_at?->timestamp)->toBe($trialEnd)
+                ->and(app(BillingAccess::class)->forOwner(billingNativeOwner(7))['plan'])->toBe('pro');
+        });
+    } finally {
+        date_default_timezone_set($timezone);
+        config(['app.timezone' => $timezone]);
+    }
+});
 it('synchronizes an explicit billing contact changed through the Stripe portal', function (): void {
     billingNativeRun(function () {
         $account = BillingAccount::query()->forceCreate(['email' => 'old@example.test', 'stripe_id' => 'cus_contact_test']);
@@ -219,10 +243,11 @@ it('does not overwrite newer local observations made during the canonical provid
         $account = BillingAccount::query()->forceCreate(['email' => 'audit@example.test', 'stripe_id' => 'cus_race']);
         $subscription = BillingSubscription::factory()->forAccount($account)->create(['stripe_id' => 'sub_race', 'stripe_status' => 'past_due']);
         $active = ['id' => 'sub_race', 'customer' => 'cus_race', 'status' => 'active', 'items' => ['data' => [['id' => 'si_race', 'price' => ['id' => 'price_pro', 'product' => 'prod_pro'], 'quantity' => 1]]]];
+        $reads = 0;
         $reader = Mockery::mock(SubscriptionReader::class);
-        $reader->shouldReceive('forCustomer')->once()->with('cus_race')->andReturnUsing(function () use ($subscription, $active): array {
+        $reader->shouldReceive('forCustomer')->times(3)->with('cus_race')->andReturnUsing(function () use ($subscription, $active, &$reads): array {
             expect($subscription->getConnection()->transactionLevel())->toBe(0);
-            $subscription->update(['stripe_status' => 'canceled', 'ends_at' => now()]);
+            $subscription->update(['stripe_status' => 'canceled', 'ends_at' => now()->addSeconds(++$reads)]);
 
             return [$active];
         });
@@ -253,5 +278,52 @@ it('rolls subscription state and its receipt back together when canonical persis
         billingSignedSubscription('evt_persist_retry', 'customer.subscription.updated', $current);
         expect($account->subscriptions()->sole()->stripe_status)->toBe('active')
             ->and(DB::table(BillingTables::get(BillingTables::WebhookEvents))->count())->toBe(1);
+    });
+});
+
+it('ignores a late customer update older than the last applied one', function (): void {
+    billingNativeRun(function (): void {
+        $account = BillingAccount::query()->forceCreate(['name' => 'Original', 'email' => 'original@example.test', 'stripe_id' => 'cus_ordered']);
+        $newer = time() - 10;
+        billingSignedSubscription('evt_customer_newer', 'customer.updated', ['id' => 'cus_ordered', 'name' => 'Newer', 'email' => 'newer@example.test'], $newer);
+        billingSignedSubscription('evt_customer_older', 'customer.updated', ['id' => 'cus_ordered', 'name' => 'Older', 'email' => 'older@example.test'], $newer - 50);
+
+        expect($account->fresh()->name)->toBe('Newer')
+            ->and($account->fresh()->email)->toBe('newer@example.test')
+            ->and($account->fresh()->provider_customer_updated_at?->getTimestamp())->toBe($newer)
+            ->and(DB::table(BillingTables::get(BillingTables::WebhookEvents))->count())->toBe(2);
+
+        billingSignedSubscription('evt_customer_same_second', 'customer.updated', ['id' => 'cus_ordered', 'name' => 'Same second', 'email' => 'newer@example.test'], $newer);
+        billingSignedSubscription('evt_customer_latest', 'customer.updated', ['id' => 'cus_ordered', 'name' => 'Latest', 'email' => 'latest@example.test'], $newer + 5);
+
+        expect($account->fresh()->name)->toBe('Latest')
+            ->and($account->fresh()->email)->toBe('latest@example.test')
+            ->and($account->fresh()->provider_customer_updated_at?->getTimestamp())->toBe($newer + 5);
+    });
+});
+
+it('waits for a concurrent subscription callback and applies current provider facts instead of refusing', function (): void {
+    billingNativeRun(function (): void {
+        $account = BillingAccount::query()->forceCreate(['email' => 'race@example.test', 'stripe_id' => 'cus_race']);
+        $current = ['id' => 'sub_race', 'customer' => 'cus_race', 'status' => 'active', 'metadata' => ['type' => 'default'], 'items' => ['data' => [['id' => 'si_race', 'price' => ['id' => 'price_pro', 'product' => 'prod_pro'], 'quantity' => 1]]]];
+        billingCurrentSubscription($current);
+        billingSignedSubscription('evt_race_created', 'customer.subscription.created', $current);
+        $reads = 0;
+        $reader = Mockery::mock(SubscriptionReader::class);
+        $reader->shouldReceive('forCustomer')->with('cus_race')->andReturnUsing(function () use (&$reads, $current): array {
+            if (++$reads === 1) {
+                DB::table(BillingTables::get(BillingTables::Subscriptions))->where('stripe_id', 'sub_race')->update(['stripe_status' => 'past_due']);
+            }
+
+            return [[...$current, 'status' => 'trialing']];
+        });
+        app()->instance(SubscriptionReader::class, $reader);
+        app()->forgetInstance(BillingWebhooks::class);
+
+        billingSignedSubscription('evt_race_updated', 'customer.subscription.updated', $current);
+
+        expect($reads)->toBe(2)
+            ->and($account->subscriptions()->sole()->stripe_status)->toBe('trialing')
+            ->and(DB::table(BillingTables::get(BillingTables::WebhookEvents))->where('stripe_event_id', 'evt_race_updated')->count())->toBe(1);
     });
 });

@@ -27,6 +27,9 @@ use Stripe\WebhookSignature;
  */
 final class BillingWebhooks
 {
+    /** Provider reads one subscription callback may spend waiting out concurrent local writers. */
+    private const int REFRESH_ATTEMPTS = 3;
+
     /** Inject subscription and account synchronization boundaries. */
     public function __construct(
         private readonly BillingSubscriptionSyncer $subscriptions,
@@ -81,37 +84,59 @@ final class BillingWebhooks
         }
 
         $this->ownership->run($eventPayload, function () use ($payload, $connection, $eventPayload, $subscriptionEvent): void {
-            if ($this->ownership->receipt($payload['id'], $payload['type']) === null) {
+            for ($attempt = 1; ; $attempt++) {
+                try {
+                    $this->applyOnce($payload['id'], $payload['type'], $connection, $eventPayload, $subscriptionEvent);
+
+                    return;
+                } catch (BillingException $exception) {
+                    if (! $subscriptionEvent || $attempt === self::REFRESH_ATTEMPTS
+                        || $exception->responseCode() !== BillingResponseCode::ReconciliationRequired->value) {
+                        throw $exception;
+                    }
+                }
+            }
+        });
+    }
+
+    /**
+     * Record and apply the event once; a concurrent local change rolls the receipt back so the
+     * caller can observe the committed state and read current provider facts again.
+     *
+     * @param  array<string, mixed>  $eventPayload
+     */
+    private function applyOnce(string $eventId, string $type, ?string $connection, array $eventPayload, bool $subscriptionEvent): void
+    {
+        if ($this->ownership->receipt($eventId, $type) === null) {
+            return;
+        }
+        $refresh = $subscriptionEvent ? $this->refreshSubscription($eventPayload) : null;
+        DB::connection($connection)->transaction(function () use ($eventId, $type, $connection, $eventPayload, $subscriptionEvent, $refresh): void {
+            $attributes = $this->ownership->receipt($eventId, $type);
+            if ($attributes === null) {
                 return;
             }
-            $refresh = $subscriptionEvent ? $this->refreshSubscription($eventPayload) : null;
-            DB::connection($connection)->transaction(function () use ($payload, $connection, $eventPayload, $subscriptionEvent, $refresh): void {
-                $attributes = $this->ownership->receipt($payload['id'], $payload['type']);
-                if ($attributes === null) {
-                    return;
-                }
-                $inserted = DB::connection($connection)
-                    ->table(BillingTables::get(BillingTables::WebhookEvents))
-                    ->insertOrIgnore([
-                        ...$attributes,
-                        'stripe_event_id' => $payload['id'],
-                        'type' => $payload['type'],
-                        'processed_at' => now(),
-                    ]);
+            $inserted = DB::connection($connection)
+                ->table(BillingTables::get(BillingTables::WebhookEvents))
+                ->insertOrIgnore([
+                    ...$attributes,
+                    'stripe_event_id' => $eventId,
+                    'type' => $type,
+                    'processed_at' => now(),
+                ]);
 
-                if ($inserted === 0) {
-                    return;
-                }
+            if ($inserted === 0) {
+                return;
+            }
 
-                if ($subscriptionEvent) {
-                    if ($refresh !== null) {
-                        $this->applySubscriptionRefresh($refresh, $payload['type'] === 'customer.subscription.created');
-                    }
-                } else {
-                    $this->applyEvent($eventPayload);
+            if ($subscriptionEvent) {
+                if ($refresh !== null) {
+                    $this->applySubscriptionRefresh($refresh, $type === 'customer.subscription.created');
                 }
+            } else {
+                $this->applyEvent($eventPayload);
+            }
 
-            });
         });
     }
 
@@ -224,7 +249,8 @@ final class BillingWebhooks
         }
 
         if ($type === 'customer.updated') {
-            $this->customers->updateCustomer($subscription);
+            $created = $payload['created'] ?? null;
+            $this->customers->updateCustomer($subscription, is_int($created) && $created > 0 ? $created : null);
 
             return;
         }

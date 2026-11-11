@@ -75,3 +75,18 @@ it('adds checkout request identity without inventing historical inputs or changi
     unset($retained['pending_checkout_request_hash']);
     expect($retained)->toBe($original);
 });
+
+it('reports missing customer event ordering storage through doctor', function (): void {
+    $paths = glob(__DIR__.'/../../database/migrations/billing/*.php') ?: [];
+    $ordering = array_values(array_filter($paths, static fn (string $path): bool => str_contains($path, 'order_customer_updates')));
+    foreach (array_diff($paths, $ordering) as $path) {
+        (require $path)->up();
+    }
+    config(['nvl-billing.enabled' => true, 'nvl-ownership.enabled' => false]);
+
+    expect(app(BillingDoctor::class)->inspect()['checks']['customer_event_order_schema'])->toBeFalse();
+
+    (require $ordering[0])->up();
+
+    expect(app(BillingDoctor::class)->inspect()['checks']['customer_event_order_schema'])->toBeTrue();
+});

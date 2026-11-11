@@ -27,9 +27,17 @@ return new class extends Migration
         }
     }
 
-    /** Removing retained provider request identity requires reviewed retirement. */
+    /** Remove the request identity. Production refuses while accounts exist, because bound attempts cannot be re-verified. */
     public function down(): void
     {
-        throw new RuntimeException('Billing Checkout identity requires a reviewed retirement migration.');
+        $schema = Schema::connection($this->getConnection());
+        $table = BillingTables::get(BillingTables::Accounts);
+        if (! $schema->hasTable($table) || ! $schema->hasColumn($table, 'pending_checkout_request_hash')) {
+            return;
+        }
+        if (app()->isProduction() && $schema->getConnection()->table($table)->exists()) {
+            throw new RuntimeException('Billing Checkout identity holds accounts; rolling it back in production requires a reviewed retirement migration.');
+        }
+        $schema->table($table, static fn (Blueprint $table) => $table->dropColumn('pending_checkout_request_hash'));
     }
 };

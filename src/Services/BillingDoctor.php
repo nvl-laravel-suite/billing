@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Nvl\Billing\Services;
 
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use JsonException;
 use Laravel\Cashier\Cashier;
@@ -33,9 +34,20 @@ final class BillingDoctor
             new DoctorCheck('adoption.cashier_models', 'info', true, config('nvl-billing.adoption.cashier_models') === true
                 ? 'Explicit Cashier model adoption: '.implode(', ', [Cashier::$customerModel, Cashier::$subscriptionModel, Cashier::$subscriptionItemModel])
                 : 'Cashier models remain host-owned.'),
-            new DoctorCheck('adoption.cashier_routes', 'info', true, config('nvl-billing.adoption.cashier_routes') === true
-                ? 'Explicit adoption suppresses native Cashier routes.' : 'Native Cashier routes remain host-owned.'),
+            new DoctorCheck('adoption.cashier_routes', 'info', true, Cashier::$registersRoutes
+                ? 'Native Cashier routes remain host-owned.' : 'Billing suppresses native Cashier routes.'),
+            $this->cashierWebhookRouteCheck(),
         ];
+    }
+
+    /** Warn when Stripe events could be answered by Cashier's controller instead of BillingWebhooks. */
+    private function cashierWebhookRouteCheck(): DoctorCheck
+    {
+        $conflict = config('nvl-billing.enabled') === true && Route::has('cashier.webhook');
+
+        return new DoctorCheck('adoption.cashier_webhook_route', 'warning', ! $conflict, $conflict
+            ? 'Cashier\'s own webhook route is registered next to Billing: a Stripe endpoint pointed at it is handled by Cashier\'s controller and customer model, not BillingWebhooks. Remove nvl-billing.adoption.keep_cashier_routes or exclude that route, and point Stripe only at the application endpoint that calls BillingWebhooks::process().'
+            : 'Cashier\'s own webhook route is not registered next to Billing.');
     }
 
     /**
@@ -71,6 +83,7 @@ final class BillingDoctor
         $accounts = BillingTables::get(BillingTables::Accounts);
         $checks['account_lifecycle_schema'] = ! $enabled || ($checks[$accounts] && Schema::connection($connection)->hasColumn($accounts, 'provider_deleted_at'));
         $checks['checkout_request_schema'] = ! $enabled || ($checks[$accounts] && Schema::connection($connection)->hasColumn($accounts, 'pending_checkout_request_hash'));
+        $checks['customer_event_order_schema'] = ! $enabled || ($checks[$accounts] && Schema::connection($connection)->hasColumn($accounts, 'provider_customer_updated_at'));
         $checks['ownership_adoption'] = ! $enabled;
         if ($enabled && $checks['ownership_runtime']) {
             try {
