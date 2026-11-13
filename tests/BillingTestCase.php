@@ -10,6 +10,11 @@ use Nvl\Ownership\Contracts\OwnerSystemAccess;
 /** Installs explicit native host policy for Billing feature scenarios. */
 abstract class BillingTestCase extends OwnerScopeTestCase
 {
+    protected function mayReuseAdoptedSchema(): bool
+    {
+        return get_parent_class($this) === self::class;
+    }
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -18,5 +23,6 @@ abstract class BillingTestCase extends OwnerScopeTestCase
         {
             public function assertCanRun(string $operation, Model $owner): void {}
         });
+        $this->retainAdoptedOwnershipSchema();
     }
 }

@@ -327,3 +327,12 @@ it('waits for a concurrent subscription callback and applies current provider fa
             ->and(DB::table(BillingTables::get(BillingTables::WebhookEvents))->where('stripe_event_id', 'evt_race_updated')->count())->toBe(1);
     });
 });
+
+it('clears the local billing contact name when Stripe sends an explicit null or empty customer name', function (): void {
+    billingNativeRun(function (): void {
+        $account = BillingAccount::query()->forceCreate(['name' => 'Acme Billing', 'email' => 'old@example.test', 'stripe_id' => 'cus_clear_name']);
+        billingSignedSubscription('evt_clear_name', 'customer.updated', ['id' => 'cus_clear_name', 'name' => null, 'email' => 'new@example.test']);
+
+        expect($account->fresh()->name)->toBeNull()->and($account->fresh()->email)->toBe('new@example.test');
+    });
+});

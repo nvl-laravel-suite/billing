@@ -90,3 +90,37 @@ it('rejects remote contact updates inside an outer transaction without changing 
         }
     });
 });
+
+it('synchronizes Stripe when a customer ID is concurrently attached before the contact lock', function (): void {
+    billingNativeRun(function (): void {
+        $owner = billingNativeOwner(7);
+        $actor = Actor::query()->findOrFail(1);
+        $account = BillingAccount::query()->forceCreate(['email' => 'old@example.test', 'stripe_id' => null]);
+
+        app()->instance(BillingManagementAccess::class, new class implements BillingManagementAccess
+        {
+            public function assertCanManage(Authenticatable $actor, TenantId $tenant): void {}
+        });
+
+        $attached = false;
+        BillingAccount::retrieved(function (BillingAccount $retrieved) use ($account, &$attached): void {
+            if (! $attached && $retrieved->id === $account->id && $retrieved->stripe_id === null) {
+                $attached = true;
+                BillingAccount::query()->whereKey($account->id)->update(['stripe_id' => 'cus_concurrent']);
+            }
+        });
+
+        try {
+            $gateway = FakeBillingGateway::fake(app())->willReturn('updateCustomer', null);
+            $updated = app(BillingContacts::class)->update($owner, $actor, 'Synced Name', 'synced@example.test');
+
+            expect($updated->stripe_id)->toBe('cus_concurrent')
+                ->and($account->fresh()->name)->toBe('Synced Name')
+                ->and($account->fresh()->email)->toBe('synced@example.test')
+                ->and($gateway->calls('updateCustomer'))->toHaveCount(1);
+        } finally {
+            BillingAccount::flushEventListeners();
+            BillingAccount::boot();
+        }
+    });
+});

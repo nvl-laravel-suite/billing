@@ -59,10 +59,6 @@ abstract class OwnerScopeTestCase extends OwnershipTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        foreach (glob(__DIR__.'/../database/migrations/billing/*.php') ?: [] as $path) {
-            (require $path)->up();
-        }
-        (require __DIR__.'/../../ownership/database/migrations/ownership/2026_10_18_000001_nvl_ownership_create_adoption_tables.php')->up();
         $this->app->bind(OwnershipAdoptionAccess::class, static fn () => new class implements OwnershipAdoptionAccess
         {
             public function authorize(OwnershipOperation $operation): void {}
@@ -91,12 +87,10 @@ abstract class OwnerScopeTestCase extends OwnershipTestCase
                 return [];
             }
         });
-        $coordinator = $this->app->make(OwnershipAdoptionCoordinator::class);
-        $operation = new OwnershipOperation('billing-adopt', 'operator', '1');
-        $plan = $coordinator->prepare(['billing'], $this->adoptionMappings(), $operation);
-        while (! $coordinator->backfill($plan, 100, $operation)) {
+        if (! $this->hasRetainedOwnershipSchema()) {
+            $this->installAdoptedSchema();
         }
-        $coordinator->activate($plan, $operation);
+
         $this->app->make(MaintenanceMode::class)->deactivate();
         $this->allowOwners();
     }
@@ -107,5 +101,19 @@ abstract class OwnerScopeTestCase extends OwnershipTestCase
     protected function adoptionMappings(): array
     {
         return [];
+    }
+
+    private function installAdoptedSchema(): void
+    {
+        foreach (glob(__DIR__.'/../database/migrations/billing/*.php') ?: [] as $path) {
+            (require $path)->up();
+        }
+        (require __DIR__.'/../../ownership/database/migrations/ownership/2026_10_18_000001_nvl_ownership_create_adoption_tables.php')->up();
+        $coordinator = $this->app->make(OwnershipAdoptionCoordinator::class);
+        $operation = new OwnershipOperation('billing-adopt', 'operator', '1');
+        $plan = $coordinator->prepare(['billing'], $this->adoptionMappings(), $operation);
+        while (! $coordinator->backfill($plan, 100, $operation)) {
+        }
+        $coordinator->activate($plan, $operation);
     }
 }

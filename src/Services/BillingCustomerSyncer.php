@@ -35,8 +35,13 @@ final readonly class BillingCustomerSyncer
         }
 
         $changes = [];
-        if (is_string($customer['name'] ?? null) && $customer['name'] !== '') {
-            $changes['name'] = $customer['name'];
+        if (array_key_exists('name', $customer)) {
+            if (is_string($customer['name'])) {
+                $trimmedName = trim($customer['name']);
+                $changes['name'] = $trimmedName === '' ? null : $trimmedName;
+            } elseif ($customer['name'] === null) {
+                $changes['name'] = null;
+            }
         }
         if (is_string($customer['email'] ?? null) && filter_var($customer['email'], FILTER_VALIDATE_EMAIL) !== false) {
             $changes['email'] = $customer['email'];

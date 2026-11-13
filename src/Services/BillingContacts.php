@@ -6,6 +6,7 @@ namespace Nvl\Billing\Services;
 
 use DomainException;
 use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Database\UniqueConstraintViolationException;
 use InvalidArgumentException;
 use Nvl\Billing\Contracts\BillingGateway;
 use Nvl\Billing\Contracts\BillingManagementAccess;
@@ -45,33 +46,50 @@ final readonly class BillingContacts
             throw new InvalidArgumentException('A valid billing contact name and email are required.');
         }
 
+        $connection = BillingModelRegistry::newAccount()->getConnection();
         $account = BillingModelRegistry::accountQuery()->where('owner_scope_key', $owner->scopeKey())->first();
         if ($account === null) {
-            return BillingModelRegistry::newAccount()->getConnection()->transaction(function () use ($name, $email): BillingAccount {
-                $created = BillingModelRegistry::accountQuery()->create(['name' => $name, 'email' => $email]);
-                ($this->events ?? BillingEvents::current())->accountChanged($created, 'created');
+            try {
+                return $connection->transaction(function () use ($name, $email): BillingAccount {
+                    $created = BillingModelRegistry::accountQuery()->create(['name' => $name, 'email' => $email]);
+                    ($this->events ?? BillingEvents::current())->accountChanged($created, 'created');
 
-                return $created;
+                    return $created;
+                });
+            } catch (UniqueConstraintViolationException) {
+                $account = BillingModelRegistry::accountQuery()->where('owner_scope_key', $owner->scopeKey())->firstOrFail();
+            }
+        }
+
+        $syncedStripeId = null;
+        while (true) {
+            if ($account->stripe_id !== null && $account->stripe_id !== $syncedStripeId) {
+                if ($account->getConnection()->transactionLevel() !== 0) {
+                    throw new DomainException('Remote billing contact updates must start outside a database transaction.');
+                }
+                $this->gateway->updateCustomer($account, $name, $email);
+                $syncedStripeId = $account->stripe_id;
+            }
+
+            $persisted = $account->getConnection()->transaction(function () use ($account, $name, $email, $syncedStripeId): bool {
+                $locked = $account->newQuery()->whereKey($account->getKey())->lockForUpdate()->firstOrFail();
+                $account->setRawAttributes($locked->getAttributes(), true);
+                if ($account->stripe_id !== null && $account->stripe_id !== $syncedStripeId) {
+                    return false;
+                }
+                $account->forceFill(['name' => $name, 'email' => $email]);
+                $changed = $account->isDirty(['name', 'email']);
+                $account->save();
+                if ($changed) {
+                    ($this->events ?? BillingEvents::current())->accountChanged($account, 'contact_updated');
+                }
+
+                return true;
             });
-        }
 
-        if ($account->stripe_id !== null) {
-            if ($account->getConnection()->transactionLevel() !== 0) {
-                throw new DomainException('Remote billing contact updates must start outside a database transaction.');
+            if ($persisted) {
+                return $account;
             }
-            $this->gateway->updateCustomer($account, $name, $email);
         }
-
-        $account->getConnection()->transaction(function () use ($account, $name, $email): void {
-            $account->setRawAttributes($account->newQuery()->whereKey($account->getKey())->lockForUpdate()->firstOrFail()->getAttributes(), true);
-            $account->forceFill(['name' => $name, 'email' => $email]);
-            $changed = $account->isDirty(['name', 'email']);
-            $account->save();
-            if ($changed) {
-                ($this->events ?? BillingEvents::current())->accountChanged($account, 'contact_updated');
-            }
-        });
-
-        return $account;
     }
 }
