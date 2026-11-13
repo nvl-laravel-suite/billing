@@ -5,9 +5,17 @@ All notable changes to `nvl/billing` are documented here.
 
 ## [Unreleased]
 
+## [7.0.4] - 2026-11-13
+
 ### Fixed
 
 - Wrap concurrent contact and customer unique-constraint races in PostgreSQL-safe savepoints and harden customer synchronization guards.
+
+<!-- NVL GENERATED CHANGES START -->
+### Changed
+
+- harden package runtime safety, PostgreSQL portability and test performance
+<!-- NVL GENERATED CHANGES END -->
 
 ## [7.0.3] - 2026-11-11
 
