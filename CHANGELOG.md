@@ -5,6 +5,8 @@ All notable changes to `nvl/billing` are documented here.
 
 ## [Unreleased]
 
+## [7.2.0] - 2026-11-17
+
 ### Fixed
 
 - Signed provider callbacks now refuse with `OwnershipViolation` before any receipt or account change when Billing's ownership declarations are unscoped (Ownership disabled or `nvl-billing.ownership.scoped = false`); previously they were applied directly to unadopted storage.
@@ -12,6 +14,12 @@ All notable changes to `nvl/billing` are documented here.
 - An `incomplete` subscription now blocks another Checkout with `subscription_conflict` before an attempt is reserved or the gateway is called, matching the documented unresolved-subscription contract. `incomplete_expired` still permits a new Checkout.
 - Provider item quantities outside `0..2147483647` are rejected with `provider_payload_invalid` before any write instead of failing on PostgreSQL integer bounds.
 - The README no longer claims accepted unhandled notifications are retained as receipts: only applied customer and subscription notifications for stored customers record receipts.
+
+<!-- NVL GENERATED CHANGES START -->
+### Changed
+
+- consumer-audit fixes across the suite, UTC timestamps, core/forms release ordering
+<!-- NVL GENERATED CHANGES END -->
 
 ## [7.1.0] - 2026-11-16
 
