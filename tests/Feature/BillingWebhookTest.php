@@ -336,3 +336,43 @@ it('clears the local billing contact name when Stripe sends an explicit null or 
         expect($account->fresh()->name)->toBeNull()->and($account->fresh()->email)->toBe('new@example.test');
     });
 });
+
+it('acknowledges signed unhandled notifications without recording a receipt', function (): void {
+    billingNativeRun(function (): void {
+        $account = BillingAccount::query()->forceCreate(['name' => 'Stored', 'email' => 'stored@example.test', 'stripe_id' => 'cus_unhandled']);
+        $before = $account->fresh()->getRawOriginal();
+
+        billingSignedSubscription('evt_unhandled_invoice', 'invoice.paid', ['id' => 'in_unhandled', 'customer' => 'cus_unhandled']);
+
+        expect(DB::table(BillingTables::WebhookEvents)->count())->toBe(0)
+            ->and($account->fresh()->getRawOriginal())->toBe($before);
+    });
+});
+
+it('rejects provider item quantities outside native storage bounds without writing', function (int $quantity): void {
+    billingNativeRun(function () use ($quantity): void {
+        BillingAccount::query()->forceCreate(['email' => 'quantity@example.test', 'stripe_id' => 'cus_quantity']);
+        $subscription = ['id' => 'sub_quantity', 'customer' => 'cus_quantity', 'status' => 'active', 'metadata' => ['type' => 'default'], 'items' => ['data' => [['id' => 'si_quantity', 'price' => ['id' => 'price_pro_month', 'product' => 'prod_pro'], 'quantity' => $quantity]]]];
+        billingCurrentSubscription($subscription);
+
+        expect(fn () => billingSignedSubscription('evt_quantity', 'customer.subscription.created', $subscription))
+            ->toThrow(function (BillingException $failure): void {
+                expect($failure->responseCode())->toBe('provider_payload_invalid');
+            });
+        expect(BillingSubscription::query()->count())->toBe(0)
+            ->and(BillingSubscriptionItem::query()->count())->toBe(0)
+            ->and(DB::table(BillingTables::WebhookEvents)->count())->toBe(0);
+    });
+})->with(['negative' => [-1], 'overflow' => [2147483648]]);
+
+it('accepts the largest provider item quantity native storage holds', function (): void {
+    billingNativeRun(function (): void {
+        BillingAccount::query()->forceCreate(['email' => 'quantity@example.test', 'stripe_id' => 'cus_quantity_max']);
+        $subscription = ['id' => 'sub_quantity_max', 'customer' => 'cus_quantity_max', 'status' => 'active', 'metadata' => ['type' => 'default'], 'items' => ['data' => [['id' => 'si_quantity_max', 'price' => ['id' => 'price_pro_month', 'product' => 'prod_pro'], 'quantity' => 2147483647]]]];
+        billingCurrentSubscription($subscription);
+
+        billingSignedSubscription('evt_quantity_max', 'customer.subscription.created', $subscription);
+
+        expect(BillingSubscriptionItem::query()->sole()->quantity)->toBe(2147483647);
+    });
+});

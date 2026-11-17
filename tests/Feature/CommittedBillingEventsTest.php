@@ -35,7 +35,7 @@ it('publishes account contact changes only after commit and suppresses unchanged
         $connection->commit();
         $action->update($id, $actor, 'private-name', 'private@example.test');
         $action->update($id, $actor, 'changed-private-name', 'private@example.test');
-        expect(array_map(fn ($event) => $event->operation, $events))->toBe(['created', 'contact_updated'])->and($events[0]->accountId)->toBe($account->id)->and(serialize($events))->not->toContain('private-name', 'private@example.test');
+        expect(array_map(fn ($event) => $event->operation, $events))->toBe(['created', 'contact_updated'])->and($events[0]->accountId)->toBe($account->id)->and(serialize($events))->not->toContain('private-name')->not->toContain('private@example.test');
     });
 });
 it('publishes subscription and item transitions once with rollback and cancellation replay safety', function (): void {
@@ -85,7 +85,7 @@ it('publishes the first persisted checkout session and reuses it without another
         $arguments = [billingNativeOwner(7), Actor::query()->findOrFail(1), 'private@example.test', 'pro', 'month', 'https://example.test/success', 'https://example.test/cancel'];
         $action->start(...$arguments);
         $action->start(...$arguments);
-        expect($events)->toHaveCount(1)->and($events[0]->sessionId)->toBe('cs_c4')->and(serialize($events[0]))->not->toContain('private@example.test', 'private-session');
+        expect($events)->toHaveCount(1)->and($events[0]->sessionId)->toBe('cs_c4')->and(serialize($events[0]))->not->toContain('private@example.test')->not->toContain('private-session');
         $gateway->assertCalled('checkout');
     });
 });

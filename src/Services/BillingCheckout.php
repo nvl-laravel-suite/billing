@@ -139,7 +139,7 @@ final readonly class BillingCheckout
             ->where('billing_account_id', $account->id)
             ->where('type', $type)
             ->where(function ($query): void {
-                $query->whereIn('stripe_status', ['active', 'trialing', 'past_due', 'paused', 'unpaid'])
+                $query->whereIn('stripe_status', ['active', 'trialing', 'incomplete', 'past_due', 'paused', 'unpaid'])
                     ->orWhere('ends_at', '>', now());
             })
             ->exists();

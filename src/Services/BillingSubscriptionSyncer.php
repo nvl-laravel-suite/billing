@@ -18,6 +18,9 @@ use Nvl\Billing\Models\BillingSubscriptionItem;
  */
 final class BillingSubscriptionSyncer
 {
+    /** Largest quantity the native signed 32-bit integer column stores on every supported driver. */
+    private const int MAX_QUANTITY = 2147483647;
+
     /** Retain the shared Billing fact publisher. */
     public function __construct(private readonly BillingEvents $events, private readonly BillingRecordWriter $writer) {}
 
@@ -136,7 +139,7 @@ final class BillingSubscriptionSyncer
             }
 
             $quantity = $item['quantity'] ?? null;
-            if ($quantity !== null && ! is_int($quantity)) {
+            if ($quantity !== null && (! is_int($quantity) || $quantity < 0 || $quantity > self::MAX_QUANTITY)) {
                 throw BillingException::because(BillingResponseCode::ProviderPayloadInvalid, 'Stripe subscription item quantity is invalid.');
             }
 

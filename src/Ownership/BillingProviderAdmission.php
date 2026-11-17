@@ -35,11 +35,7 @@ final readonly class BillingProviderAdmission
      */
     public function run(array $payload, Closure $apply): void
     {
-        if (! $this->native()) {
-            $apply();
-
-            return;
-        }
+        $this->assertNative();
         $this->integrity->assertReady();
         $type = $payload['type'] ?? null;
         $data = $payload['data'] ?? null;
@@ -77,9 +73,7 @@ final readonly class BillingProviderAdmission
      */
     public function receipt(string $eventId, string $type): ?array
     {
-        if (! $this->native()) {
-            return [];
-        }
+        $this->assertNative();
         $this->readiness->assertActive('billing.webhooks');
         $model = new BillingWebhookEvent;
         $row = $model->getConnection()->table($model->getTable())->useWritePdo()->where('stripe_event_id', $eventId)
@@ -96,9 +90,11 @@ final readonly class BillingProviderAdmission
         return $this->boundary->attributes('billing.webhooks');
     }
 
-    /** Identify native declarations without granting fallback access to adopted storage. */
-    private function native(): bool
+    /** Refuse unscoped declarations; Billing has no fallback mode that applies provider facts without an owner. */
+    private function assertNative(): void
     {
-        return $this->resources->get('billing.accounts')->ownership->strategy !== 'unscoped';
+        if ($this->resources->get('billing.accounts')->ownership->strategy === 'unscoped') {
+            throw new OwnershipViolation('Billing provider callbacks require native ownership.');
+        }
     }
 }

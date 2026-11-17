@@ -317,3 +317,33 @@ it('blocks duplicate subscriptions and conflicting pending checkouts', function 
         }
     });
 });
+
+it('blocks another checkout while an unresolved subscription is stored', function (string $status, bool $blocked): void {
+    billingNativeRun(function () use ($status, $blocked): void {
+        config()->set('nvl-billing.prices', ['pro' => ['monthly' => 'price_pro_month']]);
+        $account = BillingAccount::query()->create(['email' => 'billing@example.test']);
+        app()->instance(BillingManagementAccess::class, new class implements BillingManagementAccess
+        {
+            public function assertCanManage(Authenticatable $actor, TenantId $tenant): void {}
+        });
+        BillingSubscription::factory()->forAccount($account)->create(['type' => 'default', 'stripe_id' => 'sub_'.$status, 'stripe_status' => $status, 'ends_at' => null]);
+        $gateway = FakeBillingGateway::fake(app())->willReturn('checkout', ['id' => 'cs_after_'.$status, 'url' => 'https://example.test/checkout', 'expiresAt' => CarbonImmutable::now()->addHour()]);
+        $start = fn (): array => app(BillingCheckout::class)->start(billingNativeOwner(7), Actor::query()->findOrFail(1), 'billing@example.test', 'pro', 'monthly', 'https://app.test/success', 'https://app.test/cancel');
+
+        if ($blocked) {
+            expect($start)->toThrow(function (BillingException $failure): void {
+                expect($failure->responseCode())->toBe('subscription_conflict');
+            });
+            expect($account->fresh()->pending_checkout_attempt_id)->toBeNull()
+                ->and($gateway->calls('checkout'))->toBe([]);
+
+            return;
+        }
+        $start();
+        expect($account->fresh()->pending_checkout_attempt_id)->not->toBeNull()
+            ->and($gateway->calls('checkout'))->toHaveCount(1);
+    });
+})->with([
+    'incomplete' => ['incomplete', true],
+    'incomplete expired' => ['incomplete_expired', false],
+]);

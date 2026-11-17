@@ -61,20 +61,20 @@ final readonly class BillingContacts
             }
         }
 
-        $syncedStripeId = null;
+        $synchronized = null;
         while (true) {
-            if ($account->stripe_id !== null && $account->stripe_id !== $syncedStripeId) {
+            if ($account->stripe_id !== null && $this->contact($account) !== $synchronized) {
                 if ($account->getConnection()->transactionLevel() !== 0) {
                     throw new DomainException('Remote billing contact updates must start outside a database transaction.');
                 }
+                $synchronized = $this->contact($account);
                 $this->gateway->updateCustomer($account, $name, $email);
-                $syncedStripeId = $account->stripe_id;
             }
 
-            $persisted = $account->getConnection()->transaction(function () use ($account, $name, $email, $syncedStripeId): bool {
+            $persisted = $account->getConnection()->transaction(function () use ($account, $name, $email, $synchronized): bool {
                 $locked = $account->newQuery()->whereKey($account->getKey())->lockForUpdate()->firstOrFail();
                 $account->setRawAttributes($locked->getAttributes(), true);
-                if ($account->stripe_id !== null && $account->stripe_id !== $syncedStripeId) {
+                if ($account->stripe_id !== null && $this->contact($account) !== $synchronized) {
                     return false;
                 }
                 $account->forceFill(['name' => $name, 'email' => $email]);
@@ -91,5 +91,15 @@ final readonly class BillingContacts
                 return $account;
             }
         }
+    }
+
+    /**
+     * Capture the provider identity and contact a remote update was based on.
+     *
+     * @return array{stripe_id:mixed,name:mixed,email:mixed}
+     */
+    private function contact(BillingAccount $account): array
+    {
+        return ['stripe_id' => $account->stripe_id, 'name' => $account->name, 'email' => $account->email];
     }
 }

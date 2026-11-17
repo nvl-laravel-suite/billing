@@ -124,3 +124,50 @@ it('synchronizes Stripe when a customer ID is concurrently attached before the c
         }
     });
 });
+
+it('repeats provider synchronization when another contact update commits during the provider call', function (): void {
+    billingNativeRun(function (): void {
+        $owner = billingNativeOwner(7);
+        $actor = Actor::query()->findOrFail(1);
+        $account = BillingAccount::query()->forceCreate(['name' => 'Original', 'email' => 'old@example.test', 'stripe_id' => 'cus_interleaved_contact']);
+        app()->instance(BillingManagementAccess::class, new class implements BillingManagementAccess
+        {
+            public function assertCanManage(Authenticatable $actor, TenantId $tenant): void {}
+        });
+        $gateway = new class implements BillingGateway
+        {
+            /** @var list<string> */
+            public array $remote = [];
+
+            public ?Closure $competitor = null;
+
+            public function checkout(BillingAccount $account, string $price, int $trialDays, string $successUrl, string $cancelUrl, CarbonImmutable $expiresAt, string $attemptId): array
+            {
+                throw new LogicException('Checkout should not be called.');
+            }
+
+            public function portal(BillingAccount $account, string $returnUrl): string
+            {
+                throw new LogicException('Portal should not be called.');
+            }
+
+            public function updateCustomer(BillingAccount $account, string $name, string $email): void
+            {
+                $this->remote[] = $name;
+                $competitor = $this->competitor;
+                $this->competitor = null;
+                if ($competitor !== null) {
+                    $competitor();
+                }
+            }
+        };
+        $gateway->competitor = static fn () => app(BillingContacts::class)->update($owner, $actor, 'Second', 'second@example.test');
+        app()->instance(BillingGateway::class, $gateway);
+
+        app(BillingContacts::class)->update($owner, $actor, 'First', 'first@example.test');
+
+        expect($gateway->remote)->toBe(['First', 'Second', 'First'])
+            ->and($account->fresh()->name)->toBe('First')
+            ->and($account->fresh()->email)->toBe('first@example.test');
+    });
+});

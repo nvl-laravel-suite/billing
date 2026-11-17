@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\DB;
 use Nvl\Billing\Definitions\Tables\BillingTables;
+use Nvl\Billing\Ownership\BillingResourceRegistrar;
 use Nvl\Billing\Providers\BillingServiceProvider;
 use Nvl\Billing\Services\BillingDoctor;
 use Nvl\Billing\Services\BillingWebhooks;
+use Nvl\Support\Ownership\Exceptions\OwnershipViolation;
+use Nvl\Support\Ownership\Services\OwnershipResourceRegistry;
 use Nvl\Support\Providers\SupportServiceProvider;
 use Orchestra\Testbench\TestCase;
 
@@ -90,3 +93,24 @@ it('reports missing customer event ordering storage through doctor', function ()
 
     expect(app(BillingDoctor::class)->inspect()['checks']['customer_event_order_schema'])->toBeTrue();
 });
+
+it('refuses signed provider callbacks without native ownership before any effect', function (bool $ownershipEnabled, bool $scoped): void {
+    foreach (glob(__DIR__.'/../../database/migrations/billing/*.php') ?: [] as $path) {
+        (require $path)->up();
+    }
+    config(['nvl-billing.enabled' => true, 'nvl-ownership.enabled' => $ownershipEnabled, 'nvl-billing.ownership.scoped' => $scoped, 'cashier.webhook.secret' => 'whsec_unscoped']);
+    (new BillingResourceRegistrar)->register(app(OwnershipResourceRegistry::class), $ownershipEnabled && $scoped);
+    $table = BillingTables::get(BillingTables::Accounts);
+    DB::table($table)->insert(['id' => '3f3c0f5e-74b5-4c47-9d0c-0f1b0dd8a6e1', 'email' => 'before@example.test', 'name' => 'Before', 'stripe_id' => 'cus_unscoped']);
+    $payload = json_encode(['id' => 'evt_unscoped', 'type' => 'customer.updated', 'created' => time(), 'data' => ['object' => ['id' => 'cus_unscoped', 'name' => 'After', 'email' => 'after@example.test']]], JSON_THROW_ON_ERROR);
+    $timestamp = time();
+    $signature = hash_hmac('sha256', "{$timestamp}.{$payload}", 'whsec_unscoped');
+
+    expect(fn () => app(BillingWebhooks::class)->process($payload, "t={$timestamp},v1={$signature}"))
+        ->toThrow(OwnershipViolation::class, 'Billing provider callbacks require native ownership.');
+    expect(DB::table($table)->sole()->email)->toBe('before@example.test')
+        ->and(DB::table(BillingTables::get(BillingTables::WebhookEvents))->count())->toBe(0);
+})->with([
+    'ownership disabled' => [false, true],
+    'billing scoping disabled' => [true, false],
+]);

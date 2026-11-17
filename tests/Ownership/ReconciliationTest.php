@@ -54,7 +54,7 @@ it('continues an admitted owner worklist after an operational failure and return
     expect(Artisan::call('nvl:billing:reconcile'))->toBe(1)
         ->and($reader->customers)->toBe(['cus_failed', 'cus_successful'])
         ->and(json_decode(Artisan::output(), true, flags: JSON_THROW_ON_ERROR))->toBe(['succeeded' => 1, 'failed' => 1])
-        ->and(Artisan::output())->not->toContain('private-provider-detail', 'cus_failed', 'billing@example.test')
+        ->and(Artisan::output())->not->toContain('private-provider-detail')->not->toContain('cus_failed')->not->toContain('billing@example.test')
         ->and(app(OwnershipContext::class)->snapshot()->owner)->toBeNull();
 })->with([false, true]);
 
